@@ -12,6 +12,31 @@
 4. Vérifier que `Reprise` s'enregistre (`reveilEnregistre`) — un identifiant
    absent de `BGTaskSchedulerPermittedIdentifiers` échoue **à l'exécution**.
 
+## Notifications — brancher sur les vrais événements
+
+Ce qui a été prouvé dans les labs EchoLabs, c'est le **mécanisme** : une locale
+part, elle s'affiche, ses actions reviennent à l'app. Ce qui n'a jamais été
+observé, c'est ce mécanisme déclenché par un **événement réel du Pi** — la chaîne
+`Alerte/` est écrite et câblée, elle n'a simplement jamais sonné pour un vrai
+mandat.
+
+- [ ] Provoquer un vrai mandat sur le Pi, app fermée, et vérifier que l'alerte
+      arrive. C'est la seule preuve qui compte : tout le reste de Vigie peut
+      marcher, si celle-ci ne part pas le produit ne sert à rien.
+- [ ] Reprendre les trois autres circuits un par un : rallonge, arbitrage
+      d'inspection, notification du harness. Ils passent par le même sondage
+      (`CentreAlerte.sonder`) mais pas par les mêmes routes ni les mêmes
+      catégories.
+- [ ] Vérifier la **déduplication** sur la durée : une même proposition sondée
+      par le canal audio, puis par le rattrapage d'ouverture, puis par un réveil
+      de fond ne doit sonner qu'une fois.
+- [ ] Vérifier les **actions** de notification (accorder / refuser depuis l'écran
+      verrouillé) contre le vrai serveur — `ActionRecue` écrit réellement, la
+      route n'a jamais été appelée depuis ce chemin.
+- [ ] Mesurer le délai réel entre l'événement sur le Pi et l'alerte sur le
+      téléphone, dans les quatre régimes (app ouverte, en fond avec audio, en
+      fond sans audio, app tuée).
+
 ## Serveur (`~/ccremote`, à faire sur le Pi — le clone local est en lecture seule)
 
 - [ ] **C** — `check_session` : 401 JSON sur `/api/*`, 303 conservé sur le HTML.
