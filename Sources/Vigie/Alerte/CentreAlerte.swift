@@ -79,6 +79,8 @@ public final class CentreAlerte {
         sonnes += await sonnerLesFaits(client)
         sonnes += await sonnerLesMandats(client)
         sonnes += await sonnerLesRallonges(client)
+        sonnes += await sonnerLesArbitrages(client)
+        sonnes += await sonnerLesReponses(client)
         guard etat.derniereErreurTransport == nil else { return persister() }
 
         etat.noterContact(Date(), origine: origine)
@@ -120,6 +122,49 @@ public final class CentreAlerte {
         let nouvelles = memoire.rallonges.nouveaux(rallonges.map(\.id))
         let aSonner = rallonges.filter { nouvelles.contains($0.id) }
         return await poser(aSonner.map(TraductionAlerte.projet(pour:)))
+    }
+
+    /// `☠` Une inspection qui attend un arbitrage BLOQUE une équipe qui tourne
+    /// et dépense. Elle est restée muette jusqu'au 2026-08-17 : elle apparaissait
+    /// dans la file du Quart et ne réveillait personne — la seule décision du
+    /// produit dont le coût continue de courir pendant qu'on l'ignore.
+    private func sonnerLesArbitrages(_ client: ClientPi) async -> Int {
+        let lecture = await client.lire([MissionApi].self, Route.missions, memoriser: .missions)
+        guard let missions = lecture.charge else { return 0 }
+        let enAttente = missions.filter(\.inspection.attendArbitrage)
+        let nouveaux = memoire.arbitrages.nouveaux(enAttente.map(\.id))
+        let aSonner = enAttente.filter { nouveaux.contains($0.id) }
+        return await poser(aSonner.map(TraductionAlerte.projet(pour:)))
+    }
+
+    /// Les fils quittés en pleine génération. Voir `AttenteFils` : la liste des
+    /// fils n'est lue QUE si quelque chose est réellement attendu.
+    private func sonnerLesReponses(_ client: ClientPi) async -> Int {
+        guard !memoire.filsAttendus.vide else { return 0 }
+        let lecture = await client.lire([FilApi].self, Route.fils, memoriser: .fils)
+        guard let fils = lecture.charge else { return 0 }
+        let maintenant = Int(Date().timeIntervalSince1970 * 1000)
+        let repondus = memoire.filsAttendus.repondus(fils, maintenant: maintenant)
+        return await poser(repondus.map(TraductionAlerte.projet(pour:)))
+    }
+
+    /// Noté depuis l'écran de conversation : on quitte un fil qui travaille
+    /// encore, on veut être prévenu de sa réponse.
+    public func attendreLaReponse(fil identifiant: String, titre: String, majA: Int) {
+        memoire.filsAttendus.attendre(
+            id: identifiant,
+            titre: titre,
+            majA: majA,
+            maintenant: Int(Date().timeIntervalSince1970 * 1000)
+        )
+        MemoireAlerte.ecrire(memoire)
+    }
+
+    /// Le fil est rouvert : on le lit en direct, il n'y a plus rien à annoncer.
+    public func cesserDAttendre(fil identifiant: String) {
+        guard !memoire.filsAttendus.vide else { return }
+        memoire.filsAttendus.oublier(identifiant)
+        MemoireAlerte.ecrire(memoire)
     }
 
     private func poser(_ projets: [ProjetNotification]) async -> Int {

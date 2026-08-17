@@ -16,6 +16,7 @@ struct ConversationEcran: View {
     @Environment(\.miroir) private var miroir
     @Environment(Cadence.self) private var cadence
     @Environment(\.dismiss) private var congedier
+    @Environment(\.scenePhase) private var phaseScene
 
     let identifiant: String
     /// Peut arriver vide (ouverture par notification) : le miroir le retrouve.
@@ -56,7 +57,13 @@ struct ConversationEcran: View {
         .cadencePar(cle) { await battre() }
         .onChange(of: generation) { _, enCours in
             cadence.changerRegime(cle, enCours ? .generation : .repos)
+            // La réponse est arrivée sous les yeux : plus rien à annoncer.
+            if !enCours { CentreAlerte.partage.cesserDAttendre(fil: identifiant) }
         }
+        .onChange(of: phaseScene) { _, phase in
+            if phase != .active { noterLAttenteSiBesoin() }
+        }
+        .onDisappear { noterLAttenteSiBesoin() }
         .avisFugace($avis)
         .feuilleQuart(presentee: $feuilleMoteur, hauteurs: [.medium, .large]) {
             ChoixMoteurFeuille(catalogue: catalogue, modeleDuFil: detail?.model, choix: $choixMoteur)
@@ -153,6 +160,8 @@ struct ConversationEcran: View {
     // MARK: - Relevés
 
     private func ouvrir() async {
+        // On est dedans : ce qui arrive s'affiche, il n'y a plus à l'annoncer.
+        CentreAlerte.partage.cesserDAttendre(fil: identifiant)
         if let cache = await miroir.lire(DetailFilApi.self, .fil(identifiant)) {
             appliquer(cache.valeur)
             releveA = cache.releveA
@@ -207,6 +216,23 @@ struct ConversationEcran: View {
         curseur = charge.cursor
         generation = charge.generating
         partiel = charge.partial
+    }
+
+    /// On s'en va pendant que le fil travaille : le bus prendra le relais et
+    /// annoncera la réponse.
+    ///
+    /// `☠` DEUX sorties, pas une. Le retour arrière (`onDisappear`) est la plus
+    /// évidente, mais la plus fréquente est le verrouillage du téléphone en
+    /// restant dans le fil — qui ne déclenche AUCUN `onDisappear`. N'écouter que
+    /// la première laisserait sans alerte le cas le plus courant du produit :
+    /// poser une question, ranger le téléphone, attendre.
+    @MainActor private func noterLAttenteSiBesoin() {
+        guard generation else { return }
+        CentreAlerte.partage.attendreLaReponse(
+            fil: identifiant,
+            titre: titreAffiche,
+            majA: filConnu?.majA ?? 0
+        )
     }
 
     /// Relit la fiche du fil dans la LISTE.

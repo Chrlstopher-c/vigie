@@ -30,7 +30,7 @@ enum CategoriesAlerte {
     }
 
     static var toutes: Set<UNNotificationCategory> {
-        [mandat, rallonge, parc, silence, signature]
+        [mandat, rallonge, arbitrage, fil, parc, silence, signature]
     }
 
     /// `☠` Le seul geste réellement engageant de l'application : il dispatche
@@ -70,6 +70,19 @@ enum CategoriesAlerte {
                 ),
             ]
         )
+    }
+
+    /// `☠` AUCUN bouton, et c'est le seul refus délibéré du produit : arbitrer
+    /// une inspection, c'est décider si une équipe qui semble boucler doit être
+    /// arrêtée. Ça se décide en lisant le motif du verdict, jamais sur deux mots
+    /// de bannière. On ouvre l'app, on lit, on tranche.
+    private static var arbitrage: UNNotificationCategory {
+        categorie(GenreAlerte.arbitrage.categorie, actions: [ouvrirVigie])
+    }
+
+    /// Une réponse arrivée dans un fil quitté en cours de génération.
+    private static var fil: UNNotificationCategory {
+        categorie(GenreAlerte.reponse.categorie, actions: [ouvrirVigie])
     }
 
     /// Pas de bouton : une fin d'équipe ne se tranche pas, elle se lit.

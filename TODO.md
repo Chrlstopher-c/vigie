@@ -115,12 +115,16 @@ mandat.
 - [ ] Reprendre les autres circuits un par un : rallonge, `equipe_terminee`,
       `equipe_echouee`. Ils passent par le même sondage (`CentreAlerte.sonder`)
       mais pas par les mêmes routes ni les mêmes catégories.
-- [ ] **L'arbitrage d'inspection ne sonne PAS** — constaté en relisant
-      `CentreAlerte.sonder`, qui ne couvre que faits / mandats / rallonges. Une
-      inspection qui attend un verdict humain est pourtant une décision
-      bloquante, au même titre qu'un mandat : elle apparaît dans la file du
-      Quart mais ne réveille personne. À brancher (`missions` →
-      `inspection.attendArbitrage`, comme le fait déjà `DecisionsEcran`).
+- [x] **L'arbitrage d'inspection ne sonnait pas** — corrigé le 2026-08-17.
+      `CentreAlerte.sonnerLesArbitrages` couvre désormais
+      `inspection.attendArbitrage`. Catégorie SANS boutons, délibérément :
+      arbitrer se décide en lisant le motif du verdict, pas sur deux mots de
+      bannière. À vérifier sur l'appareil.
+- [x] **Réponse d'un fil quitté en génération** — ajouté le 2026-08-17.
+      `AttenteFils` (noyau, 7 tests) + `CentreAlerte.sonnerLesReponses`. Deux
+      sorties écoutées : retour arrière ET verrouillage du téléphone dans le fil.
+      Alerte `discrete` : c'est une nouvelle attendue, pas une décision. À
+      vérifier sur l'appareil — surtout le cas « je verrouille sans quitter ».
 - [ ] Vérifier la **déduplication** sur la durée : une même proposition sondée
       par le canal audio, puis par le rattrapage d'ouverture, puis par un réveil
       de fond ne doit sonner qu'une fois.

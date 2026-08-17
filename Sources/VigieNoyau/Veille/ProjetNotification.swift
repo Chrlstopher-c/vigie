@@ -22,6 +22,13 @@ public enum GenreAlerte: String, Codable, Sendable, CaseIterable {
     case mandat
     /// Une demande d'élargissement d'autonomie.
     case rallonge
+    /// Une inspection a rendu un verdict de boucle et attend un arbitrage.
+    /// `☠` Sans boutons, délibérément : contrairement à un mandat, on ne peut
+    /// pas trancher sans avoir lu le motif du verdict. Deux boutons sur l'écran
+    /// verrouillé feraient arrêter — ou laisser courir — une équipe à l'aveugle.
+    case arbitrage
+    /// Un fil quitté en pleine génération vient de répondre.
+    case reponse
     /// Une équipe a rendu.
     case equipe
     /// Une équipe s'est arrêtée sur un échec.
@@ -40,6 +47,8 @@ public enum GenreAlerte: String, Codable, Sendable, CaseIterable {
         switch self {
         case .mandat: return "vigie.mandat"
         case .rallonge: return "vigie.rallonge"
+        case .arbitrage: return "vigie.arbitrage"
+        case .reponse: return "vigie.fil"
         case .equipe, .echec, .parc: return "vigie.parc"
         case .silence: return "vigie.silence"
         case .signature: return "vigie.signature"
@@ -50,6 +59,8 @@ public enum GenreAlerte: String, Codable, Sendable, CaseIterable {
         switch self {
         case .mandat: return "Mandat"
         case .rallonge: return "Rallonge"
+        case .arbitrage: return "Arbitrage"
+        case .reponse: return "Réponse"
         case .equipe: return "Équipe"
         case .echec: return "Échec"
         case .silence: return "Silence"

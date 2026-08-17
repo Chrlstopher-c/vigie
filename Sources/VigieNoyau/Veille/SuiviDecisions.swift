@@ -37,14 +37,41 @@ public struct SuiviDecisions: Codable, Sendable, Equatable {
 
 /// Ce que le veilleur retient d'un relevé à l'autre, en un seul objet
 /// sérialisable — un seul enregistrement, donc un seul risque de désynchronisation.
+///
+/// `☠` Le décodage est TOLÉRANT À L'ABSENCE de chaque champ, et il doit le
+/// rester : la mémoire persiste dans `UserDefaults` d'une version à l'autre.
+/// Avec l'init synthétisé, ajouter un champ rendrait illisible la mémoire écrite
+/// par la version précédente — donc, au premier lancement suivant une mise à
+/// jour, re-sonnerait tout ce qui est en attente et rejouerait un filigrane
+/// vierge. Un champ neuf vaut « rien de connu », jamais « mémoire corrompue ».
 public struct MemoireVeille: Codable, Sendable, Equatable {
     public var faits: FiligraneNotifications
     public var mandats: SuiviDecisions
     public var rallonges: SuiviDecisions
+    /// Les inspections qui attendent un arbitrage humain. Dédupliquées comme les
+    /// mandats : ce sont des demandes en attente, pas des faits historiques.
+    public var arbitrages: SuiviDecisions
+    /// Les fils quittés en pleine génération — voir `AttenteFils`.
+    public var filsAttendus: AttenteFils
 
     public init() {
         faits = FiligraneNotifications()
         mandats = SuiviDecisions()
         rallonges = SuiviDecisions()
+        arbitrages = SuiviDecisions()
+        filsAttendus = AttenteFils()
+    }
+
+    public init(from decodeur: Decoder) throws {
+        let bac = try decodeur.container(keyedBy: CodingKeys.self)
+        faits = try bac.decodeIfPresent(FiligraneNotifications.self, forKey: .faits)
+            ?? FiligraneNotifications()
+        mandats = try bac.decodeIfPresent(SuiviDecisions.self, forKey: .mandats) ?? SuiviDecisions()
+        rallonges = try bac.decodeIfPresent(SuiviDecisions.self, forKey: .rallonges)
+            ?? SuiviDecisions()
+        arbitrages = try bac.decodeIfPresent(SuiviDecisions.self, forKey: .arbitrages)
+            ?? SuiviDecisions()
+        filsAttendus = try bac.decodeIfPresent(AttenteFils.self, forKey: .filsAttendus)
+            ?? AttenteFils()
     }
 }

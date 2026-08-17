@@ -37,7 +37,14 @@ public final class ActionRecue: EcouteurNotifications {
     /// ce qui engage une décision — un mandat qui arrive pendant qu'on lit un
     /// fil doit se voir sans changer d'onglet.
     public func presenter(_ fait: FaitNotifie) -> Bool {
-        genre(fait) == .mandat || genre(fait) == .echec
+        switch genre(fait) {
+        // Ce qui engage une décision se voit sans changer d'onglet.
+        case .mandat, .echec, .arbitrage: return true
+        // `☠` Une réponse de fil, NON : si Vigie est à l'écran, ou bien le fil
+        // est ouvert et la réponse s'y affiche déjà, ou bien elle attend dans la
+        // liste. Une bannière par-dessus doublonnerait avec ce qu'on regarde.
+        default: return false
+        }
     }
 
     public func recevoir(_ fait: FaitNotifie) async {
@@ -108,7 +115,8 @@ public final class ActionRecue: EcouteurNotifications {
 
     private func domaineDe(_ fait: FaitNotifie) -> Domaine {
         switch genre(fait) {
-        case .mandat, .rallonge: return .decisions
+        case .mandat, .rallonge, .arbitrage: return .decisions
+        case .reponse: return .fil
         case .equipe, .echec: return .parc
         case .silence, .signature: return .alerte
         default: return fait.donnees[ProjetNotification.Cle.fil] == nil ? .quart : .fil

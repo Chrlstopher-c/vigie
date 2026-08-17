@@ -78,6 +78,56 @@ public enum TraductionAlerte {
         )
     }
 
+    // MARK: - Arbitrages d'inspection (`GET /missions`, `inspection.attendArbitrage`)
+
+    /// `☠` Le MOTIF du verdict est le corps, pas un détail : arbitrer, c'est
+    /// décider si une équipe qui semble tourner en rond doit être arrêtée. Le
+    /// titre seul ne permet pas de trancher — d'où l'absence de boutons sur
+    /// cette catégorie, et l'insistance sur ce que l'inspection a constaté.
+    public static func projet(pour mission: MissionApi) -> ProjetNotification {
+        let donnees = [
+            ProjetNotification.Cle.mission: mission.id,
+            ProjetNotification.Cle.genre: GenreAlerte.arbitrage.rawValue,
+        ]
+        return ProjetNotification(
+            identifiant: "arbitrage.\(mission.id)",
+            genre: .arbitrage,
+            titre: "Arbitrage demandé",
+            sousTitre: "\(mission.project) · \(somme(mission.cost)) dépensés",
+            corps: mission.inspection.motif ?? mission.inspection.libelle
+                ?? "L'inspection soupçonne une boucle.",
+            fil: "arbitrage",
+            donnees: donnees,
+            insistance: .active
+        )
+    }
+
+    // MARK: - Fils quittés en génération (`GET /orchestrator/conversations`)
+
+    /// La réponse d'un fil qu'on a quitté pendant qu'il travaillait.
+    ///
+    /// `☠` `discrete` et non `active` : ce n'est pas une décision, c'est une
+    /// nouvelle attendue. Sonner comme un mandat brouillerait la seule
+    /// hiérarchie qui compte la nuit — ce qui réclame la main passe avant ce qui
+    /// informe. Le regroupement par fil évite qu'un aller-retour de trois
+    /// questions produise trois bannières empilées.
+    public static func projet(pour fil: FilAttendu) -> ProjetNotification {
+        let donnees = [
+            ProjetNotification.Cle.fil: fil.id,
+            ProjetNotification.Cle.genre: GenreAlerte.reponse.rawValue,
+        ]
+        return ProjetNotification(
+            identifiant: "reponse.\(fil.id).\(fil.depuis)",
+            genre: .reponse,
+            titre: "Réponse arrivée",
+            sousTitre: fil.titre.isEmpty ? nil : fil.titre,
+            corps: "Le fil a fini de travailler.",
+            fil: "fil.\(fil.id)",
+            donnees: donnees,
+            insistance: .discrete
+        )
+    }
+
     /// Les deux volets sont indépendants : dire lequel est demandé change ce
     /// qu'on accorde. « Plage + plafond » n'est pas « plafond ».
     private static func portee(de rallonge: RallongeApi) -> String {
