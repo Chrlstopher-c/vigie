@@ -20,9 +20,10 @@ struct EnveloppeApi<Charge: Decodable & Sendable>: Decodable, Sendable {
 /// chercher un problème sur la machine de travail pendant que le Pi est muet.
 /// Un `Bool` plus un optionnel autoriseraient les deux confusions ; ce type non.
 public enum LectureApi<Charge: Decodable & Sendable>: Sendable {
-    /// PC en ligne, relevé de l'instant.
+    /// Relevé de l'instant : le harness a répondu en direct.
     case fraiche(Charge)
-    /// PC absent : le registre du Pi répond, les données sont vraies mais datées.
+    /// Le registre persisté du Pi a répondu à la place : les données sont vraies
+    /// mais datées. Cause côté serveur : le poste de travail ne répond pas.
     /// `donnees` à `nil` = le Pi ne sait rien non plus sur ce point.
     case datee(donnees: Charge?, message: String?)
     /// Panne réelle, à tous les étages : transport, authentification, 4xx/5xx,
@@ -44,8 +45,15 @@ public enum LectureApi<Charge: Decodable & Sendable>: Sendable {
         return nil
     }
 
-    /// Le PC de travail répondait-il au moment du relevé ?
-    public var pcEnLigne: Bool {
+    /// Ce relevé vient-il de l'instant, ou du registre persisté du Pi ?
+    ///
+    /// `☠` NE DIT RIEN de la machine qui héberge ce qu'on regarde. Le serveur
+    /// marque `stale` **toute** réponse du harness quand le poste de travail
+    /// dort, missions du VPS comprises : c'est une propriété DU RELEVÉ, pas du
+    /// sujet. Le nom précédent — `pcEnLigne` — invitait à en faire un état
+    /// global affiché en permanence, et l'app annonçait « PC éteint » sur un fil
+    /// qui tournait sur le VPS. Constaté sur l'appareil le 2026-08-17.
+    public var releveFrais: Bool {
         if case .fraiche = self { return true }
         return false
     }

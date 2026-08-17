@@ -10,32 +10,44 @@ import VigieNoyau
 /// jamais, y compris depuis un domaine écrit trois semaines plus tard.
 public struct VerdictLien: Sendable {
     public let instant: Date
-    /// `nil` quand rien n'est revenu : on ne sait pas si le PC est éteint ou si
-    /// c'est le Pi qui est muet. Les confondre est exactement l'erreur à éviter.
-    public let pcEnLigne: Bool?
+    /// Le relevé venait-il de l'instant, ou du registre persisté du Pi ?
+    /// `nil` quand la requête ne dit rien là-dessus (écriture, route binaire).
+    public let releveFrais: Bool?
     public let erreur: ErreurApi?
 
-    public init(instant: Date = Date(), pcEnLigne: Bool?, erreur: ErreurApi?) {
+    public init(instant: Date = Date(), releveFrais: Bool?, erreur: ErreurApi?) {
         self.instant = instant
-        self.pcEnLigne = pcEnLigne
+        self.releveFrais = releveFrais
         self.erreur = erreur
     }
 }
 
 /// L'état de liaison, en permanence à l'écran.
 ///
-/// Trois régimes, et le second n'est PAS une panne : le PC de travail éteint la
-/// nuit est le fonctionnement normal du produit. L'afficher en rouge ferait
-/// chercher un problème inexistant la moitié du temps ; l'afficher en vert ferait
-/// prendre des données de la veille pour l'instant présent.
+/// `☠` CE BANDEAU NE PARLE QUE DE LA LIAISON, JAMAIS D'UNE MACHINE. Il a
+/// longtemps annoncé « PC en ligne » / « PC éteint », c'est-à-dire l'état d'UNE
+/// machine du parc présenté comme l'état du produit entier : sur un fil hébergé
+/// par le VPS, l'app affichait « PC éteint » et laissait croire que ce qu'on
+/// regardait dormait. Constaté sur l'appareil le 2026-08-17.
+///
+/// Trois notions à ne jamais refondre :
+///  1. la liaison au Pi — globale, c'est ce type ;
+///  2. la fraîcheur d'un relevé — propriété DU RELEVÉ, portée par
+///     `MentionFraicheur` sur chaque écran ;
+///  3. l'état d'une machine — `MachineApi.enLigne`, par machine, affiché là où
+///     cette machine est le sujet.
+///
+/// Et le régime `registre` n'est PAS une panne : le poste de travail éteint la
+/// nuit est le fonctionnement normal du produit.
 @MainActor @Observable
 public final class Liaison {
 
     public enum Regime: Sendable, Equatable {
-        /// Pi joignable, PC de travail en ligne : tout est frais.
+        /// Le harness répond en direct.
         case nominal
-        /// Pi joignable, PC de travail absent. Régime normal, données datées.
-        case posteEteint
+        /// Le registre persisté du Pi répond à la place : données vraies, datées.
+        /// Cause habituelle, mais jamais affirmée ici : le poste de travail dort.
+        case registre
         /// Le Pi ne répond pas : tunnel coupé, control plane mort, réseau absent.
         case perdue
         /// Session close ou périmée : plus rien n'est lisible avant reconnexion.
@@ -54,8 +66,8 @@ public final class Liaison {
 
     public var libelle: String {
         switch regime {
-        case .nominal: return "PC en ligne"
-        case .posteEteint: return "PC éteint"
+        case .nominal: return "en direct"
+        case .registre: return "registre du Pi"
         case .perdue: return jamaisJoint ? "Pi injoignable" : "liaison perdue"
         case .sessionRequise: return "session à rouvrir"
         }
@@ -66,8 +78,8 @@ public final class Liaison {
         switch regime {
         case .nominal:
             return nil
-        case .posteEteint:
-            return "registre du Pi — données datées"
+        case .registre:
+            return "poste de travail absent — données datées"
         case .perdue:
             guard let dernierContact else { return dernierEchec?.message }
             return "dernier contact \(Fraicheur.texte(depuis: dernierContact))"
@@ -86,15 +98,15 @@ public final class Liaison {
         jamaisJoint = false
         dernierContact = verdict.instant
         dernierEchec = nil
-        // `pcEnLigne == nil` : l'aller-retour a abouti mais ne dit rien du poste
-        // de travail (écriture, route binaire). On ne DÉGRADE pas le bandeau sur
-        // une absence d'information — un envoi réussi ferait clignoter « PC
-        // éteint » alors qu'il vient précisément d'être servi.
-        guard let pcEnLigne = verdict.pcEnLigne else {
+        // `releveFrais == nil` : l'aller-retour a abouti mais ne dit rien de la
+        // fraîcheur (écriture, route binaire). On ne DÉGRADE pas le bandeau sur
+        // une absence d'information — un envoi réussi ferait clignoter
+        // « registre » alors qu'il vient précisément d'être servi.
+        guard let releveFrais = verdict.releveFrais else {
             if regime == .perdue || regime == .sessionRequise { regime = .nominal }
             return
         }
-        regime = pcEnLigne ? .nominal : .posteEteint
+        regime = releveFrais ? .nominal : .registre
     }
 
     private func appliquerErreur(_ erreur: ErreurApi, instant: Date) {

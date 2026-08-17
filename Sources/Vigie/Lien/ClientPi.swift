@@ -83,7 +83,7 @@ public actor ClientPi {
         // la seule requête dont la redirection est le signe du succès.
         switch await executerBrut(demande, session: sessionLecture, tolererRedirection: true) {
         case .failure(let erreur):
-            signaler(pcEnLigne: nil, erreur: erreur)
+            signaler(releveFrais: nil, erreur: erreur)
             return .failure(erreur)
         case .success(let reponse):
             return conclureConnexion(reponse)
@@ -98,7 +98,7 @@ public actor ClientPi {
                 message: reponse.statut == 401 ? "Mot de passe refusé." : "Le Pi n'a pas ouvert de session.",
                 genre: .authentification
             )
-            signaler(pcEnLigne: nil, erreur: erreur)
+            signaler(releveFrais: nil, erreur: erreur)
             return .failure(erreur)
         }
         jeton = valeur
@@ -131,13 +131,13 @@ public actor ClientPi {
         }
         switch await executerBrut(demande, session: sessionLecture) {
         case .failure(let erreur):
-            signaler(pcEnLigne: nil, erreur: erreur)
+            signaler(releveFrais: nil, erreur: erreur)
             return .echec(erreur)
         case .success(let reponse):
             let lecture = DecodeurContrat.lecture(type, statut: reponse.statut, corps: reponse.corps)
-            signaler(pcEnLigne: lecture.erreur == nil ? lecture.pcEnLigne : nil, erreur: lecture.erreur)
+            signaler(releveFrais: lecture.erreur == nil ? lecture.releveFrais : nil, erreur: lecture.erreur)
             if let cle, lecture.charge != nil {
-                await miroir.deposer(cle, corps: reponse.corps, forme: .enveloppe, pcEnLigne: lecture.pcEnLigne)
+                await miroir.deposer(cle, corps: reponse.corps, forme: .enveloppe, pcEnLigne: lecture.releveFrais)
             }
             return lecture
         }
@@ -170,15 +170,15 @@ public actor ClientPi {
         }
         switch await executerBrut(demande, session: sessionLecture) {
         case .failure(let erreur):
-            signaler(pcEnLigne: nil, erreur: erreur)
+            signaler(releveFrais: nil, erreur: erreur)
             return .failure(erreur)
         case .success(let reponse):
             guard (200...299).contains(reponse.statut) else {
                 let erreur = ClassementErreur.classer(statut: reponse.statut, corps: reponse.corps)
-                signaler(pcEnLigne: nil, erreur: erreur)
+                signaler(releveFrais: nil, erreur: erreur)
                 return .failure(erreur)
             }
-            signaler(pcEnLigne: nil, erreur: nil)
+            signaler(releveFrais: nil, erreur: nil)
             return .success(reponse.corps)
         }
     }
@@ -192,11 +192,11 @@ public actor ClientPi {
         }
         switch await executerBrut(demande, session: sessionEcriture) {
         case .failure(let erreur):
-            signaler(pcEnLigne: nil, erreur: erreur)
+            signaler(releveFrais: nil, erreur: erreur)
             return .failure(erreur)
         case .success(let reponse):
             let accuse = DecodeurContrat.ecriture(statut: reponse.statut, corps: reponse.corps)
-            signaler(pcEnLigne: nil, erreur: accuse.echec)
+            signaler(releveFrais: nil, erreur: accuse.echec)
             return accuse
         }
     }
@@ -235,11 +235,11 @@ public actor ClientPi {
         }
         switch await executerBrut(demande, session: session) {
         case .failure(let erreur):
-            signaler(pcEnLigne: nil, erreur: erreur)
+            signaler(releveFrais: nil, erreur: erreur)
             return .failure(erreur)
         case .success(let reponse):
             let resultat = DecodeurContrat.nu(type, statut: reponse.statut, corps: reponse.corps)
-            signaler(pcEnLigne: nil, erreur: resultat.echec)
+            signaler(releveFrais: nil, erreur: resultat.echec)
             if let cle, resultat.echec == nil {
                 await miroir.deposer(cle, corps: reponse.corps, forme: .nue, pcEnLigne: true)
             }
@@ -260,11 +260,11 @@ public actor ClientPi {
         }
         switch await executerBrut(demande, session: session) {
         case .failure(let erreur):
-            signaler(pcEnLigne: nil, erreur: erreur)
+            signaler(releveFrais: nil, erreur: erreur)
             return .echec(erreur)
         case .success(let reponse):
             let lecture = DecodeurContrat.poste(type, statut: reponse.statut, corps: reponse.corps)
-            signaler(pcEnLigne: lecture.posteEnLigne, erreur: lecture.echec)
+            signaler(releveFrais: lecture.posteEnLigne, erreur: lecture.echec)
             if let cle, case .fraiche = lecture {
                 await miroir.deposer(cle, corps: reponse.corps, forme: .nue, pcEnLigne: true)
             }
@@ -272,14 +272,14 @@ public actor ClientPi {
         }
     }
 
-    private func signaler(pcEnLigne: Bool?, erreur: ErreurApi?) {
+    private func signaler(releveFrais: Bool?, erreur: ErreurApi?) {
         if erreur?.genre == .authentification, jeton != nil {
             // Le jeton est mort côté serveur : le garder ferait boucler l'app
             // sur des 303 en silence au lieu de demander le mot de passe.
             jeton = nil
             coffre.effacer()
         }
-        emetteur.yield(VerdictLien(pcEnLigne: pcEnLigne, erreur: erreur))
+        emetteur.yield(VerdictLien(releveFrais: releveFrais, erreur: erreur))
     }
 
     // MARK: - Transport

@@ -14,7 +14,7 @@ struct EnveloppeTests {
         let corps = donnees(#"{"pcOnline":true,"stale":false,"data":[{"id":"tour","enLigne":true,"supersedes":0}]}"#)
         let lecture = DecodeurContrat.lecture([MachineApi].self, statut: 200, corps: corps)
         let machines = try #require(lecture.charge)
-        #expect(lecture.pcEnLigne)
+        #expect(lecture.releveFrais)
         #expect(machines.first?.id == "tour")
         #expect(lecture.erreur == nil)
     }
@@ -34,7 +34,7 @@ struct EnveloppeTests {
         #expect(charge?.isEmpty == true)
         #expect(message?.hasPrefix("PC absent") == true)
         #expect(lecture.erreur == nil)
-        #expect(!lecture.pcEnLigne)
+        #expect(!lecture.releveFrais)
     }
 
     @Test("PC absent, rien de connu : data null reste .datee")

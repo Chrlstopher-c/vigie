@@ -66,7 +66,7 @@ struct ConversationEcran: View {
                 identifiant: identifiant,
                 detail: detail,
                 filConnu: filConnu,
-                apres: { await battre() },
+                apres: { await battre(); await rafraichirFilConnu() },
                 apresArchivage: { congedier() }
             )
         }
@@ -160,6 +160,7 @@ struct ConversationEcran: View {
         if let cache = await miroir.lire([FilApi].self, .fils) {
             filConnu = cache.valeur.first { $0.id == identifiant }
         }
+        if filConnu == nil { await rafraichirFilConnu() }
         if let cache = await miroir.lire([ModeleApi].self, .modeles) {
             catalogue = cache.valeur
         }
@@ -206,6 +207,23 @@ struct ConversationEcran: View {
         curseur = charge.cursor
         generation = charge.generating
         partiel = charge.partial
+    }
+
+    /// Relit la fiche du fil dans la LISTE.
+    ///
+    /// `☠` La machine d'un fil ne vit que là : `GET /conversations/:id` la sert
+    /// toujours à `null` (le port `detail()` du control plane ne la porte pas,
+    /// vérifié dans les sources). Sans ce rappel après chaque geste, l'écran
+    /// gardait l'instantané pris à l'ouverture — on rattachait un fil au VPS et
+    /// l'en-tête continuait d'afficher l'ancienne machine. La webapp n'a jamais
+    /// eu le défaut parce qu'elle relit sa liste en continu.
+    ///
+    /// Hors des gestes, on ne la rappelle PAS : ce serait une requête de plus à
+    /// chaque battement, jusqu'à 400 ms pendant une génération.
+    @MainActor private func rafraichirFilConnu() async {
+        let lecture = await client.lire([FilApi].self, Route.fils, memoriser: .fils)
+        guard let charge = lecture.charge else { return }
+        filConnu = charge.first { $0.id == identifiant }
     }
 
     /// Un évènement `mandat` ne porte que l'IDENTIFIANT de la proposition :

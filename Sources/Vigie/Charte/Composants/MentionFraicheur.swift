@@ -43,8 +43,12 @@ public struct MentionFraicheur: View {
     }
 }
 
-/// L'état de la liaison, lu dans l'environnement. « PC éteint » se peint en
-/// ardoise avec la lune : c'est le régime des nuits, pas une panne.
+/// L'état de la LIAISON, lu dans l'environnement — jamais celui d'une machine.
+/// Le régime « registre du Pi » se peint en ardoise avec la lune : c'est le
+/// régime des nuits, pas une panne.
+///
+/// `☠` Ne jamais y remettre le nom d'une machine. « PC éteint » s'affichait ici
+/// en permanence, y compris sur un fil hébergé par le VPS — voir `Liaison`.
 public struct PastilleLiaison: View {
     @Environment(Liaison.self) private var liaison
 
@@ -64,7 +68,7 @@ public struct PastilleLiaison: View {
         switch liaison.regime {
         case .nominal:
             PointVeille(ton: .sain)
-        case .posteEteint:
+        case .registre:
             Image(systemName: "moon.zzz.fill")
                 .font(.system(size: 9))
                 .foregroundStyle(Teinte.veille)
@@ -82,7 +86,7 @@ public struct PastilleLiaison: View {
     private var teinte: Color {
         switch liaison.regime {
         case .nominal: return Teinte.encreTernie
-        case .posteEteint: return Teinte.veille
+        case .registre: return Teinte.veille
         case .perdue: return Teinte.vigilance
         case .sessionRequise: return Teinte.accent
         }

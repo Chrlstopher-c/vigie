@@ -128,7 +128,7 @@ struct FilTests {
         )
         let lecture = DecodeurContrat.lecture([RappelApi].self, statut: 200, corps: corps)
         let rappels = try #require(lecture.charge)
-        #expect(!lecture.pcEnLigne)
+        #expect(!lecture.releveFrais)
         #expect(rappels[0].state == .actif)
         #expect(rappels[0].everyMinutes == 1440)
         #expect(rappels[0].instruction.hasPrefix("Relis"))

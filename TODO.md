@@ -1,6 +1,32 @@
 # Vigie — à faire
 
-## 🔴 URGENT — le PC et le VPS sont confondus dans tout le produit
+## ✅ CORRIGÉ (2026-08-17) — le PC et le VPS étaient confondus
+
+Corrigé entièrement côté client, sans toucher au Pi : la webapp n'a jamais eu le
+défaut, donc le contrat serveur suffisait.
+
+- **Racine A** — `Liaison.Regime.posteEteint` → `.registre`. Le bandeau global
+  dit désormais « en direct » / « registre du Pi », et ne nomme plus aucune
+  machine. `LectureApi.pcEnLigne` → `releveFrais`, `VerdictLien.pcEnLigne` →
+  `releveFrais` : le booléen dit ce qu'il mesure — la fraîcheur d'un relevé — au
+  lieu de prétendre décrire l'état d'un poste. Les routes natives `pi-web`
+  (tmux, `/api/status`) gardent `pcAbsent` : là, c'est vraiment le PC.
+- **Racine B** — `ConversationEcran.rafraichirFilConnu()` relit la liste des fils
+  après chaque geste de la feuille de tenue. La machine d'un fil ne vit que dans
+  la liste (`GET /conversations/:id` la sert toujours à `null`), et l'écran
+  gardait l'instantané pris à l'ouverture.
+
+Reste à confirmer sur l'appareil :
+
+- [ ] Le rattachement d'un fil à une autre machine se voit **immédiatement** dans
+      l'en-tête après le geste.
+- [ ] Plus aucune mention de « PC » là où le sujet n'est pas le poste de travail.
+- [ ] Que le `POST …/machine` **aboutisse** réellement côté serveur — non
+      vérifiable d'ici sans une session authentifiée au `curl`. Le symptôme
+      observé était compatible avec un affichage figé comme avec un ordre sans
+      effet ; l'affichage est corrigé, l'ordre reste à prouver.
+
+## 🔴 URGENT — le PC et le VPS sont confondus dans tout le produit (référence)
 
 Constaté sur l'appareil le 2026-08-17 : fil créé sur le PC, basculé sur le VPS,
 **l'affichage ne bouge pas** ; et partout dans l'app on lit « PC en ligne » /
