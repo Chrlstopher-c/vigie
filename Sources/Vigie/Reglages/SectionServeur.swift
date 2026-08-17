@@ -1,6 +1,6 @@
-// Section « Serveur » des Réglages : adresse du Pi, état de la liaison,
-// déconnexion. L'adresse est ADOSSÉE à `Cablage.changerAdresse`, jamais à une
-// copie locale de la logique déjà écrite pour `EcranConnexion`.
+// Section « Serveur » : adresse du Pi, état de la liaison, déconnexion.
+// L'adresse est adossée à `Cablage.changerAdresse` — jamais une copie locale
+// de la logique déjà écrite pour l'écran de connexion.
 #if canImport(SwiftUI)
 import SwiftUI
 import VigieNoyau
@@ -13,20 +13,21 @@ struct SectionServeur: View {
     @State private var adresse = ""
     @State private var erreur: String?
     @State private var enCours = false
-    let toast: @MainActor (String) -> Void
+    let avis: @MainActor (String) -> Void
 
     var body: some View {
-        SectionVigie("Serveur") {
-            CarteVigie {
-                VStack(alignment: .leading, spacing: Espace.carte) {
+        VStack(alignment: .leading, spacing: Trame.element) {
+            TeteDeSection("Serveur") {
+                PastilleLiaison()
+            }
+            Panneau {
+                VStack(alignment: .leading, spacing: Trame.bloc) {
                     champAdresse
-                    raccourcisAdresse
-                    if let erreur {
-                        BandeauAlerte(erreur, etat: .danger, symbole: "exclamationmark.triangle.fill")
-                    }
+                    raccourcis
+                    if let erreur { BandeauNote(erreur, ton: .danger) }
                     boutonAppliquer
-                    FiletHorizontal()
-                    ligneLiaison
+                    FiletFin()
+                    precisionLiaison
                     boutonDeconnexion
                 }
             }
@@ -35,7 +36,7 @@ struct SectionServeur: View {
     }
 
     private var champAdresse: some View {
-        ChampSaisie(
+        ChampQuart(
             "Adresse du Pi",
             texte: $adresse,
             placebo: "https://…",
@@ -46,58 +47,39 @@ struct SectionServeur: View {
         .keyboardType(.URL)
     }
 
-    /// Les deux raccourcis documentés par `Cablage` : le tunnel de
-    /// `deploy-web-pi.sh`, et le repli LAN saisi ici et nulle part ailleurs.
-    private var raccourcisAdresse: some View {
-        HStack(spacing: Espace.standard) {
+    /// Les deux adresses du produit : le tunnel de `deploy-web-pi.sh`, et le
+    /// repli LAN — saisissable ici et sur l'écran de connexion, nulle part
+    /// ailleurs.
+    private var raccourcis: some View {
+        HStack(spacing: Trame.serre) {
             Button("Tunnel par défaut") { adresse = Cablage.adresseParDefaut.absoluteString }
-                .buttonStyle(.vigieSecondaire)
+                .buttonStyle(.allurePuce)
             Button("Repli LAN") { adresse = "http://vigie.local:8766" }
-                .buttonStyle(.vigieSecondaire)
+                .buttonStyle(.allurePuce)
         }
     }
 
     private var boutonAppliquer: some View {
-        Button {
+        Button(enCours ? "Application…" : "Appliquer l'adresse") {
             Task { await appliquer() }
-        } label: {
-            HStack(spacing: Espace.serre) {
-                if enCours { IndicateurActivite(diametre: 13) }
-                Text(enCours ? "Application…" : "Appliquer l'adresse")
-            }
-            .frame(maxWidth: .infinity)
         }
-        .buttonStyle(.vigiePrimaire)
+        .buttonStyle(.allureDouce)
         .disabled(enCours || adresse.isEmpty)
     }
 
-    private var ligneLiaison: some View {
-        HStack {
-            Text("Liaison").secondaire().foregroundStyle(Couleurs.texteTertiaire)
-            Spacer(minLength: 0)
-            VStack(alignment: .trailing, spacing: 2) {
-                PastilleEtat(liaison.libelle, etat: etatLiaison)
-                if let precision = liaison.precision {
-                    Text(precision).legende().foregroundStyle(Couleurs.texteTertiaire)
-                }
-            }
+    @ViewBuilder private var precisionLiaison: some View {
+        if let precision = liaison.precision {
+            Text(precision)
+                .mention()
+                .foregroundStyle(Teinte.encreTernie)
         }
     }
 
-    private var etatLiaison: EtatSemantique {
-        switch liaison.regime {
-        case .nominal: return .sain
-        case .posteEteint: return .vigilance
-        case .perdue: return .danger
-        case .sessionRequise: return .accent
-        }
-    }
-
-    /// `☠` Efface le jeton du trousseau ET le miroir (`fermerSession`) — voir
-    /// `ClientPi`. Maintien plutôt que confirmation : c'est le geste destructif
-    /// engageant que la charte réserve à `BoutonMaintenu`.
+    /// `☠` Efface le jeton du trousseau ET le miroir (`fermerSession`) : le
+    /// miroir porte des titres de projets, il ne survit pas à une session
+    /// close. Maintien armé — le geste destructif engageant de la charte.
     private var boutonDeconnexion: some View {
-        BoutonMaintenu("Maintenir pour se déconnecter", libelleArme: "Déconnexion…") {
+        BoutonArme("Maintenir pour fermer la session", libelleArme: "Déconnexion…") {
             Task {
                 await client.fermerSession()
                 liaison.exigerSession()
@@ -117,7 +99,7 @@ struct SectionServeur: View {
             await cablage.changerAdresse(url)
         }
         enCours = false
-        toast("Adresse appliquée")
+        avis("Adresse appliquée")
     }
 }
 #endif

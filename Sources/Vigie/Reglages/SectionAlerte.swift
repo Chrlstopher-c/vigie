@@ -1,7 +1,5 @@
-// Section « Alerte » des Réglages : l'interrupteur du maintien en vie (session
-// audio), son état tel que le domaine `Alerte` le rapporte, et les heures
-// calmes. Voir `PreferencesAlerte` pour le contrat de pont — `Alerte` n'a, au
-// moment d'écrire ce fichier, posé que sa coquille vide.
+// Section « Alerte » : l'interrupteur du maintien en vie, l'état du canal tel
+// que le domaine Alerte le rapporte, et les heures calmes.
 #if canImport(SwiftUI)
 import SwiftUI
 import VigieNoyau
@@ -13,99 +11,112 @@ struct SectionAlerte: View {
     @State private var heureFin = PreferencesAlerte.heureFin
 
     var body: some View {
-        SectionVigie("Alerte") {
-            CarteVigie {
-                VStack(alignment: .leading, spacing: Espace.carte) {
+        VStack(alignment: .leading, spacing: Trame.element) {
+            TeteDeSection("Alerte")
+            Panneau {
+                VStack(alignment: .leading, spacing: Trame.bloc) {
                     blocMaintienEnVie
-                    FiletHorizontal()
+                    FiletFin()
                     blocEtatCanal
-                    FiletHorizontal()
+                    FiletFin()
                     blocHeuresCalmes
                 }
             }
             NavigationLink(value: Domaine.alerte) {
-                Text("État complet du canal d'alerte").libelleBouton()
+                HStack(spacing: Trame.serre) {
+                    Image(systemName: "bell.fill")
+                        .font(.system(size: 12, weight: .semibold))
+                    Text("État complet du canal d'alerte")
+                }
             }
-            .buttonStyle(.vigieSecondaire)
-            .padding(.top, Espace.standard)
+            .buttonStyle(.allureDouce)
         }
     }
 
     // MARK: - Maintien en vie
 
     private var blocMaintienEnVie: some View {
-        BasculeVigie(
-            "Maintien en vie",
-            sousLibelle: "session audio en arrière-plan, pour garder le canal éveillé",
-            active: $maintienEnVie
-        )
-        .onChange(of: maintienEnVie) { _, valeur in
-            // Ne fait QUE persister l'intention : démarrer ou couper la
-            // session audio elle-même appartient au domaine `Alerte`, qui lit
-            // ce réglage au lancement et au retour au premier plan.
-            PreferencesAlerte.maintienEnVie = valeur
+        VStack(alignment: .leading, spacing: 2) {
+            Toggle("Maintien en vie", isOn: $maintienEnVie)
+                .phrase()
+                .foregroundStyle(Teinte.encre)
+                .tint(Teinte.accent)
+            Text("Session audio silencieuse en arrière-plan — le canal temps réel, mesuré.")
+                .mention()
+                .foregroundStyle(Teinte.encreTernie)
         }
-        .sensoryFeedback(Retour.selection, trigger: maintienEnVie)
+        .onChange(of: maintienEnVie) { _, valeur in
+            PreferencesAlerte.maintienEnVie = valeur
+            // Appliqué tout de suite : attendre le prochain lancement laisserait
+            // l'interrupteur mentir une soirée entière.
+            if valeur {
+                MaintienVie.partage.demarrer()
+            } else {
+                MaintienVie.partage.arreter()
+            }
+        }
+        .sensoryFeedback(Haptique.selection, trigger: maintienEnVie)
     }
 
-    /// Lu depuis le pont UserDefaults — `nil` tant que `Alerte` n'a rien écrit.
+    /// Lu depuis le pont UserDefaults — `nil` tant qu'Alerte n'a rien écrit.
     @ViewBuilder private var blocEtatCanal: some View {
         if let etat = PreferencesAlerte.etatCanalConnu() {
             VStack(spacing: 0) {
-                LigneCleValeur("Session audio", valeur: etat.audioActif ? "active" : "coupée")
-                LigneCleValeur("Autorisation", valeur: etat.autorisation)
-                LigneCleValeur(
+                LigneCle(
+                    "Session audio",
+                    valeur: etat.audioActif ? "active" : "coupée",
+                    teinteValeur: etat.audioActif ? Teinte.sain : Teinte.veille
+                )
+                LigneCle("Autorisation", valeur: etat.autorisation)
+                LigneCle(
                     "Dernier contact",
-                    valeur: etat.dernierContact.map(Self.formater) ?? "aucun",
+                    valeur: etat.dernierContact.map { Fraicheur.texte(depuis: $0) } ?? "aucun",
                     derniere: true
                 )
             }
         } else {
-            Text("État non mesuré — le domaine Alerte n'a pas encore démarré la veille.")
-                .legende()
-                .foregroundStyle(Couleurs.texteTertiaire)
+            Text("État non mesuré — la veille n'a pas encore démarré.")
+                .mention()
+                .foregroundStyle(Teinte.encreTernie)
         }
     }
 
     // MARK: - Heures calmes
 
     private var blocHeuresCalmes: some View {
-        VStack(alignment: .leading, spacing: Espace.standard) {
-            BasculeVigie(
-                "Heures calmes",
-                sousLibelle: "\(Self.heure(heureDebut)) → \(Self.heure(heureFin))",
-                active: $heuresCalmesActives
-            )
-            .onChange(of: heuresCalmesActives) { _, v in PreferencesAlerte.heuresCalmesActives = v }
+        VStack(alignment: .leading, spacing: Trame.element) {
+            Toggle("Heures calmes", isOn: $heuresCalmesActives)
+                .phrase()
+                .foregroundStyle(Teinte.encre)
+                .tint(Teinte.accent)
+                .onChange(of: heuresCalmesActives) { _, valeur in
+                    PreferencesAlerte.heuresCalmesActives = valeur
+                }
             if heuresCalmesActives {
                 reglageHeures
-                Text("Seuls Mandat et Échec sonnent pendant les heures calmes ; le reste "
-                     + "passe en niveau passif.")
-                    .legende()
-                    .foregroundStyle(Couleurs.texteTertiaire)
+                Text("Seuls Mandat et Échec sonnent pendant les heures calmes — une "
+                    + "décision reste une décision à 3 h du matin. Le reste attend.")
+                    .mention()
+                    .foregroundStyle(Teinte.encreTernie)
             }
         }
-        .animation(Mouvement.changementEtat, value: heuresCalmesActives)
+        .animation(Elan.pose, value: heuresCalmesActives)
+        .sensoryFeedback(Haptique.selection, trigger: heuresCalmesActives)
     }
 
     private var reglageHeures: some View {
-        HStack(spacing: Espace.section) {
-            Stepper("Début · \(Self.heure(heureDebut))", value: $heureDebut, in: 0...23)
-                .onChange(of: heureDebut) { _, v in PreferencesAlerte.heureDebut = v }
-            Stepper("Fin · \(Self.heure(heureFin))", value: $heureFin, in: 0...23)
-                .onChange(of: heureFin) { _, v in PreferencesAlerte.heureFin = v }
+        VStack(spacing: Trame.serre) {
+            Stepper("Début · \(heureLisible(heureDebut))", value: $heureDebut, in: 0...23)
+                .onChange(of: heureDebut) { _, valeur in PreferencesAlerte.heureDebut = valeur }
+            Stepper("Fin · \(heureLisible(heureFin))", value: $heureFin, in: 0...23)
+                .onChange(of: heureFin) { _, valeur in PreferencesAlerte.heureFin = valeur }
         }
-        .secondaire()
-        .foregroundStyle(Couleurs.encre)
+        .note()
+        .foregroundStyle(Teinte.encre)
     }
 
-    private static func heure(_ h: Int) -> String { String(format: "%02d h", h) }
-
-    @MainActor private static func formater(_ date: Date) -> String {
-        let f = RelativeDateTimeFormatter()
-        f.locale = Locale(identifier: "fr_FR")
-        f.unitsStyle = .short
-        return f.localizedString(for: date, relativeTo: Date())
+    private func heureLisible(_ heure: Int) -> String {
+        String(format: "%02d h", heure)
     }
 }
 #endif

@@ -1,9 +1,6 @@
 // L'écran caché : ce que l'appareil accorde réellement, mesuré à l'ouverture.
 // On y arrive par un appui long sur la ligne de version des Réglages — jamais
 // par un bouton visible, ce n'est pas un écran de produit.
-//
-// Il remplace le banc EchoLabs, dont Vigie a pris le bundle : quand une chaîne
-// entière repose sur des mesures d'appareil, on n'en brûle pas l'instrument.
 #if canImport(SwiftUI)
 import SwiftUI
 import UserNotifications
@@ -11,7 +8,6 @@ import VigieNoyau
 
 struct DiagnosticEcran: View {
     @Environment(\.miroir) private var miroir
-    @Environment(\.dismiss) private var congedier
 
     @State private var releve = ReleveChaine()
     @State private var maintien = MaintienVie.partage
@@ -19,7 +15,7 @@ struct DiagnosticEcran: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: Espace.section) {
+            VStack(alignment: .leading, spacing: Trame.section) {
                 entete
                 bloc("Notifications", releve.notifications)
                 bloc("Maintien en vie", lignesMaintien)
@@ -27,35 +23,36 @@ struct DiagnosticEcran: View {
                 bloc("Environnement", releve.environnement)
                 essaiDeLocale
             }
-            .padding(.horizontal, Espace.ecran)
-            .padding(.vertical, Espace.section)
+            .padding(Trame.ecran)
         }
         .scrollIndicators(.hidden)
-        .background(Couleurs.fond)
         .task { await relever() }
         .refreshable { await relever() }
     }
 
     private var entete: some View {
-        VStack(alignment: .leading, spacing: Espace.fin) {
-            Text("Diagnostic").titreModale()
+        VStack(alignment: .leading, spacing: Trame.fin) {
+            Text("Diagnostic")
+                .titreFeuille()
+                .foregroundStyle(Teinte.encre)
             Text("Relevé de l'appareil, pas une table de documentation. Tire pour "
-                 + "refaire la mesure.")
-                .legende()
-                .foregroundStyle(Couleurs.texteTertiaire)
+                + "refaire la mesure.")
+                .mention()
+                .foregroundStyle(Teinte.encreTernie)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func bloc(_ titre: String, _ lignes: [LigneSonde]) -> some View {
-        SectionVigie(titre) {
-            CarteVigie {
+        VStack(alignment: .leading, spacing: Trame.serre) {
+            TeteDeSection(titre)
+            Panneau {
                 VStack(spacing: 0) {
                     ForEach(Array(lignes.enumerated()), id: \.element.id) { rang, ligne in
-                        LigneCleValeur(
+                        LigneCle(
                             ligne.intitule,
                             valeur: ligne.verdict,
-                            teinteValeur: ligne.etat == .neutre ? Couleurs.encre : ligne.etat.teinte,
+                            teinteValeur: ligne.ton == .neutre ? Teinte.encre : ligne.ton.teinte,
                             derniere: rang == lignes.count - 1
                         )
                     }
@@ -64,37 +61,38 @@ struct DiagnosticEcran: View {
         }
     }
 
-    /// Lu en direct sur l'objet partagé plutôt que relevé : ces compteurs bougent
-    /// pendant qu'on regarde l'écran, et c'est précisément ce qu'on veut voir.
+    /// Lu en direct sur l'objet partagé : ces compteurs bougent pendant qu'on
+    /// regarde l'écran, et c'est précisément ce qu'on veut voir.
     private var lignesMaintien: [LigneSonde] {
         [
             LigneSonde("Session audio", maintien.statut, maintien.actif ? .sain : .vigilance),
             LigneSonde("Interruptions", "\(maintien.interruptions)"),
             LigneSonde("Reprises", "\(maintien.reprises)"),
-            LigneSonde("Dernier incident", maintien.dernierIncident ?? "aucun",
-                       maintien.dernierIncident == nil ? .neutre : .vigilance),
+            LigneSonde(
+                "Dernier incident",
+                maintien.dernierIncident ?? "aucun",
+                maintien.dernierIncident == nil ? .neutre : .vigilance
+            ),
         ]
     }
 
     // MARK: - Essai de pose
 
-    /// `☠` Le seul essai qui compte vraiment : une notification locale posée
-    /// depuis cet écran, à voir arriver écran verrouillé. Dix secondes laissent
-    /// le temps de verrouiller le téléphone avant qu'elle ne tombe.
+    /// `☠` Le seul essai qui compte vraiment : une locale posée depuis cet
+    /// écran, à voir arriver écran verrouillé. Dix secondes laissent le temps
+    /// de verrouiller le téléphone.
     private var essaiDeLocale: some View {
-        SectionVigie("Essai") {
-            VStack(alignment: .leading, spacing: Espace.standard) {
-                Button("Poser une locale dans 10 s") {
-                    Task { await poserUneLocale() }
-                }
-                .buttonStyle(.vigieSecondaire)
-                if let essaiPose {
-                    Text(essaiPose)
-                        .legende()
-                        .foregroundStyle(Couleurs.texteTertiaire)
-                }
+        VStack(alignment: .leading, spacing: Trame.serre) {
+            TeteDeSection("Essai")
+            Button("Poser une locale dans 10 s") {
+                Task { await poserUneLocale() }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .buttonStyle(.allureDouce)
+            if let essaiPose {
+                Text(essaiPose)
+                    .note()
+                    .foregroundStyle(Teinte.encreDouce)
+            }
         }
     }
 

@@ -1,6 +1,6 @@
-// Section « Orchestrateur » des Réglages : le profil par défaut d'un nouveau
-// fil (modèle, effort, mode rapide, ultracode — voir `PreferencesOrchestrateur`),
-// et la bascule de compte Claude Code sur le poste de travail.
+// Section « Orchestrateur » : le profil par défaut d'un nouveau fil (modèle,
+// effort, mode rapide, ultracode — `PreferencesOrchestrateur`), et la bascule
+// de compte Claude Code sur le poste.
 #if canImport(SwiftUI)
 import SwiftUI
 import VigieNoyau
@@ -10,7 +10,6 @@ struct SectionOrchestrateur: View {
     let comptes: [CompteClaudeApi]
     let bascule: @MainActor (CompteClaudeApi) async -> Void
 
-    @State private var modeleId: String? = PreferencesOrchestrateur.modele
     @State private var effort: String? = PreferencesOrchestrateur.effort
     @State private var modeRapide = PreferencesOrchestrateur.modeRapide
     @State private var ultracode = PreferencesOrchestrateur.ultracode
@@ -22,25 +21,23 @@ struct SectionOrchestrateur: View {
     }
 
     var body: some View {
-        SectionVigie("Orchestrateur") {
-            CarteVigie {
-                VStack(alignment: .leading, spacing: Espace.carte) {
-                    if modeles.isEmpty {
-                        EtatVide(
-                            symbole: "cpu",
-                            titre: "Catalogue indisponible",
-                            explication: "Le Pi n'a pas encore rendu la liste des modèles."
-                        )
-                    } else {
+        VStack(alignment: .leading, spacing: Trame.element) {
+            TeteDeSection("Orchestrateur")
+            Panneau {
+                if modeles.isEmpty {
+                    Text("Le Pi n'a pas encore rendu le catalogue de modèles.")
+                        .mention()
+                        .foregroundStyle(Teinte.encreTernie)
+                } else {
+                    VStack(alignment: .leading, spacing: Trame.bloc) {
                         blocModele
-                        FiletHorizontal()
+                        FiletFin()
                         blocEffort
-                        FiletHorizontal()
+                        FiletFin()
                         blocBascules
                     }
                 }
             }
-            FiletHorizontal().padding(.vertical, Espace.fin)
             blocComptes
         }
         .confirmationDialog(
@@ -57,67 +54,80 @@ struct SectionOrchestrateur: View {
     // MARK: - Modèle et effort
 
     private var blocModele: some View {
-        VStack(alignment: .leading, spacing: Espace.standard) {
-            Text("Modèle par défaut").etiquette().foregroundStyle(Couleurs.texteTertiaire)
-            ScrollView(.horizontal) {
-                HStack(spacing: Espace.serre) {
-                    ForEach(modeles) { modele in
-                        PuceFiltre(modele.label, active: modele.id == modeleActuel?.id) {
-                            choisirModele(modele)
-                        }
-                    }
+        VStack(alignment: .leading, spacing: Trame.serre) {
+            Text("Modèle par défaut d'un nouveau fil")
+                .insigne()
+                .foregroundStyle(Teinte.encreDouce)
+            FluxPuces(elements: modeles.map(\.id)) { id in
+                let modele = modeles.first { $0.id == id }
+                Button(modele?.label ?? id) {
+                    if let modele { choisirModele(modele) }
                 }
+                .buttonStyle(.allurePuce(id == modeleActuel?.id ? .attention : .neutre))
+                .opacity(modele?.enabled == false ? 0.45 : 1)
             }
-            .scrollIndicators(.hidden)
+            if let note = modeleActuel?.note, !note.isEmpty {
+                Text(note).mention().foregroundStyle(Teinte.encreTernie)
+            }
         }
     }
 
+    /// `☠` Un modèle sans effort (Haiku) IGNORE le paramètre en silence : le
+    /// sélecteur se grise, sinon Chris croit régler quelque chose.
     @ViewBuilder private var blocEffort: some View {
-        VStack(alignment: .leading, spacing: Espace.standard) {
-            Text("Niveau d'effort").etiquette().foregroundStyle(Couleurs.texteTertiaire)
+        VStack(alignment: .leading, spacing: Trame.serre) {
+            Text("Niveau d'effort")
+                .insigne()
+                .foregroundStyle(Teinte.encreDouce)
             if let modele = modeleActuel, !modele.effort.isEmpty {
-                ScrollView(.horizontal) {
-                    HStack(spacing: Espace.serre) {
-                        ForEach(modele.effort, id: \.self) { niveau in
-                            PuceFiltre(niveau, active: niveau == effort) { choisirEffort(niveau) }
-                        }
-                    }
+                FluxPuces(elements: modele.effort) { niveau in
+                    Button(niveau) { choisirEffort(niveau) }
+                        .buttonStyle(.allurePuce(niveau == effort ? .attention : .neutre))
                 }
-                .scrollIndicators(.hidden)
             } else {
                 Text("Ce modèle refuse le paramètre d'effort.")
-                    .legende()
-                    .foregroundStyle(Couleurs.texteTertiaire)
+                    .mention()
+                    .foregroundStyle(Teinte.encreTernie)
             }
         }
+        .sensoryFeedback(Haptique.selection, trigger: effort)
     }
 
     private var blocBascules: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            BasculeVigie(
+        VStack(alignment: .leading, spacing: Trame.element) {
+            bascule(
                 "Mode rapide",
-                sousLibelle: modeleActuel?.fastMode == true
-                    ? nil : "réservé à la famille Opus récente",
-                active: $modeRapide
+                aide: modeleActuel?.fastMode == true ? nil : "réservé à la famille Opus récente",
+                valeur: $modeRapide
             )
             .disabled(modeleActuel?.fastMode != true)
             .onChange(of: modeRapide) { _, valeur in PreferencesOrchestrateur.modeRapide = valeur }
-            FiletHorizontal()
-            BasculeVigie(
+            bascule(
                 "Ultracode",
-                sousLibelle: modeleActuel?.ultracode == true
+                aide: modeleActuel?.ultracode == true
                     ? "xhigh + orchestration de workflows" : "exige un modèle qui l'accepte",
-                active: $ultracode
+                valeur: $ultracode
             )
             .disabled(modeleActuel?.ultracode != true)
             .onChange(of: ultracode) { _, valeur in PreferencesOrchestrateur.ultracode = valeur }
         }
-        .sensoryFeedback(Retour.selection, trigger: modeRapide)
-        .sensoryFeedback(Retour.selection, trigger: ultracode)
+        .sensoryFeedback(Haptique.selection, trigger: modeRapide)
+        .sensoryFeedback(Haptique.selection, trigger: ultracode)
+    }
+
+    private func bascule(_ titre: String, aide: String?, valeur: Binding<Bool>) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Toggle(titre, isOn: valeur)
+                .phrase()
+                .foregroundStyle(Teinte.encre)
+                .tint(Teinte.accent)
+            if let aide {
+                Text(aide).mention().foregroundStyle(Teinte.encreTernie)
+            }
+        }
     }
 
     private func choisirModele(_ modele: ModeleApi) {
-        modeleId = modele.id
         PreferencesOrchestrateur.modele = modele.id
         effort = PreferencesOrchestrateur.effortCoherent(pour: modele)
         PreferencesOrchestrateur.effort = effort
@@ -132,40 +142,52 @@ struct SectionOrchestrateur: View {
 
     // MARK: - Comptes Claude Code
 
+    /// `☠` Rien à voir avec les quotas du harness : ce sont les profils
+    /// `CLAUDE_CONFIG_DIR` du poste — la liste exige un poste en ligne.
     private var blocComptes: some View {
-        SectionVigie("Compte Claude Code") {
+        VStack(alignment: .leading, spacing: Trame.serre) {
+            TeteDeSection("Compte Claude Code")
             if comptes.isEmpty {
-                EtatVide(
-                    symbole: "person.crop.circle.badge.questionmark",
-                    titre: "Aucun compte lu",
-                    explication: "Le poste de travail doit être en ligne pour lister les comptes."
-                )
+                Text("Le poste de travail doit être en ligne pour lister les comptes.")
+                    .mention()
+                    .foregroundStyle(Teinte.encreTernie)
             } else {
-                VStack(spacing: Espace.standard) {
-                    ForEach(comptes) { compte in ligneCompte(compte) }
+                Panneau {
+                    VStack(spacing: 0) {
+                        ForEach(Array(comptes.enumerated()), id: \.element.id) { rang, compte in
+                            ligneCompte(compte, derniere: rang == comptes.count - 1)
+                        }
+                    }
                 }
             }
         }
     }
 
-    private func ligneCompte(_ compte: CompteClaudeApi) -> some View {
-        CarteVigie(relief: compte.active ? .active : .standard) {
-            HStack(spacing: Espace.standard) {
-                Text(compte.label).monoDonnee().foregroundStyle(Couleurs.encre)
+    private func ligneCompte(_ compte: CompteClaudeApi, derniere: Bool) -> some View {
+        VStack(spacing: 0) {
+            HStack(spacing: Trame.serre) {
+                Text(compte.label)
+                    .donnee()
+                    .foregroundStyle(Teinte.encre)
                 Spacer(minLength: 0)
                 if compte.active {
-                    PastilleEtat("actif", etat: .sain)
+                    Sceau("actif", ton: .sain)
                 } else {
                     Button("Activer") { compteAConfirmer = compte }
-                        .buttonStyle(.vigieSecondaire)
+                        .buttonStyle(.allurePuce)
                         .disabled(basculeEnCours)
                 }
             }
+            .padding(.vertical, Trame.serre)
+            if !derniere { FiletFin() }
         }
     }
 
     private var confirmationPresentee: Binding<Bool> {
-        Binding(get: { compteAConfirmer != nil }, set: { present in if !present { compteAConfirmer = nil } })
+        Binding(
+            get: { compteAConfirmer != nil },
+            set: { present in if !present { compteAConfirmer = nil } }
+        )
     }
 
     @ViewBuilder private var boutonsConfirmation: some View {

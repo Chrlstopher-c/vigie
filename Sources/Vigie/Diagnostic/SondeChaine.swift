@@ -1,12 +1,12 @@
 // La sonde de chaîne : ce que le système accorde RÉELLEMENT à Vigie sur cet
 // appareil, mesuré à l'instant plutôt que déduit de la documentation.
 //
-// `☠` Tout ce plan tient sur des mesures, pas sur des tables Apple : le free
-// provisioning refuse des capacités en silence (`.timeSensitive` se dégrade sans
-// erreur), et une signature d'Impactor n'accorde pas les mêmes entitlements
-// qu'une chaîne de compilation ordinaire. Cet écran est l'instrument qui a servi
-// à trancher l'architecture ; il reste embarqué pour rejouer la mesure le jour
-// où quelque chose se met à mentir.
+// `☠` Tout ce plan tient sur des mesures : le free provisioning refuse des
+// capacités EN SILENCE (`.timeSensitive` se dégrade sans erreur), et une
+// signature d'Impactor n'accorde pas les mêmes entitlements qu'une chaîne de
+// compilation ordinaire. Cet écran est l'instrument qui a tranché
+// l'architecture ; il reste embarqué pour rejouer la mesure le jour où
+// quelque chose se met à mentir.
 #if canImport(SwiftUI)
 import Foundation
 import UserNotifications
@@ -20,13 +20,13 @@ struct LigneSonde: Identifiable, Sendable {
     let id: String
     let intitule: String
     let verdict: String
-    let etat: EtatSemantique
+    let ton: Ton
 
-    init(_ intitule: String, _ verdict: String, _ etat: EtatSemantique = .neutre) {
+    init(_ intitule: String, _ verdict: String, _ ton: Ton = .neutre) {
         id = intitule
         self.intitule = intitule
         self.verdict = verdict
-        self.etat = etat
+        self.ton = ton
     }
 }
 
@@ -38,8 +38,8 @@ struct ReleveChaine: Sendable {
 
 enum SondeChaine {
 
-    /// Compte dédié : la sonde ne touche JAMAIS le jeton de session, sous peine
-    /// de déconnecter Chris en ouvrant un écran de diagnostic.
+    /// Compte dédié : la sonde ne touche JAMAIS le jeton de session, sous
+    /// peine de déconnecter Chris en ouvrant un écran de diagnostic.
     private static let compteDEssai = "diagnostic.aller-retour"
 
     @MainActor
@@ -59,20 +59,24 @@ enum SondeChaine {
         let attente = await centre.pendingNotificationRequests().count
         let categories = await centre.notificationCategories().count
         return [
-            LigneSonde("Autorisation", libelle(reglages.authorizationStatus), etatAutorisation(reglages)),
-            LigneSonde("Bannières", libelle(reglages.alertSetting), etat(reglages.alertSetting)),
-            LigneSonde("Son", libelle(reglages.soundSetting), etat(reglages.soundSetting)),
-            LigneSonde("Écran verrouillé", libelle(reglages.lockScreenSetting), etat(reglages.lockScreenSetting)),
-            // `☠` Les deux mesures qui ont commandé l'architecture : refusées en
-            // free provisioning, donc aucune alerte ne perce un mode Concentration.
-            LigneSonde("Temps réel", libelle(reglages.timeSensitiveSetting), etat(reglages.timeSensitiveSetting)),
-            LigneSonde("Alertes critiques", libelle(reglages.criticalAlertSetting), etat(reglages.criticalAlertSetting)),
-            LigneSonde("Requêtes en attente", "\(attente) / \(AlarmeSilence.budgetRequetes)", etatBudget(attente)),
+            LigneSonde("Autorisation", libelle(reglages.authorizationStatus), tonAutorisation(reglages)),
+            LigneSonde("Bannières", libelle(reglages.alertSetting), ton(reglages.alertSetting)),
+            LigneSonde("Son", libelle(reglages.soundSetting), ton(reglages.soundSetting)),
+            LigneSonde("Écran verrouillé", libelle(reglages.lockScreenSetting), ton(reglages.lockScreenSetting)),
+            // `☠` Les deux mesures qui ont commandé l'architecture : refusées
+            // en free provisioning — aucune alerte ne perce un Concentration.
+            LigneSonde("Temps réel", libelle(reglages.timeSensitiveSetting), ton(reglages.timeSensitiveSetting)),
+            LigneSonde(
+                "Alertes critiques",
+                libelle(reglages.criticalAlertSetting),
+                ton(reglages.criticalAlertSetting)
+            ),
+            LigneSonde("Requêtes en attente", "\(attente) / \(AlarmeSilence.budgetRequetes)", tonBudget(attente)),
             LigneSonde("Catégories posées", "\(categories)", categories > 0 ? .sain : .vigilance),
         ]
     }
 
-    private static func etatAutorisation(_ reglages: UNNotificationSettings) -> EtatSemantique {
+    private static func tonAutorisation(_ reglages: UNNotificationSettings) -> Ton {
         switch reglages.authorizationStatus {
         case .authorized, .provisional, .ephemeral: return .sain
         case .notDetermined: return .vigilance
@@ -80,9 +84,10 @@ enum SondeChaine {
         }
     }
 
-    /// Au-delà des trois quarts du budget iOS, les plus anciennes requêtes sont
-    /// écartées EN SILENCE : l'alarme de silence disparaîtrait sans un mot.
-    private static func etatBudget(_ attente: Int) -> EtatSemantique {
+    /// Au-delà des trois quarts du budget iOS (64), les plus anciennes
+    /// requêtes sont écartées EN SILENCE : l'alarme de silence disparaîtrait
+    /// sans un mot.
+    private static func tonBudget(_ attente: Int) -> Ton {
         attente >= (AlarmeSilence.budgetRequetes * 3) / 4 ? .danger : .sain
     }
 
@@ -106,7 +111,7 @@ enum SondeChaine {
         }
     }
 
-    private static func etat(_ reglage: UNNotificationSetting) -> EtatSemantique {
+    private static func ton(_ reglage: UNNotificationSetting) -> Ton {
         switch reglage {
         case .enabled: return .sain
         case .disabled: return .vigilance
@@ -117,10 +122,10 @@ enum SondeChaine {
     // MARK: - Stockage
 
     /// `☠` Le trousseau est la seule inconnue qui ne se voit qu'à l'exécution :
-    /// les entitlements viennent d'Impactor et non de la chaîne de compilation,
-    /// et `errSecMissingEntitlement (-34018)` ne se manifeste pas au build. Un
-    /// aller-retour réel vaut mieux qu'une hypothèse — le jeton de session en
-    /// dépend, donc la ressaisie hebdomadaire du mot de passe aussi.
+    /// les entitlements viennent d'Impactor, et `errSecMissingEntitlement`
+    /// (-34018) ne se manifeste pas à la compilation. Un aller-retour réel
+    /// vaut mieux qu'une hypothèse — la ressaisie hebdomadaire du mot de passe
+    /// en dépend.
     private static func sonderStockage(miroir: DepotMiroir) -> [LigneSonde] {
         [essaiTrousseau(), etatMiroir(miroir.emplacement)]
     }
@@ -157,8 +162,8 @@ enum SondeChaine {
     }
 
     /// `UIBackgroundModes` est une clé d'Info.plist, PAS un entitlement : elle
-    /// échappe à la signature Apple et fonctionne donc en free provisioning.
-    /// C'est ce qui rend le maintien en vie audio possible du tout.
+    /// échappe à la signature Apple et fonctionne donc en free provisioning —
+    /// c'est ce qui rend le maintien en vie audio possible du tout.
     private static func modesDeFond() -> String {
         let modes = Bundle.main.infoDictionary?["UIBackgroundModes"] as? [String] ?? []
         return modes.isEmpty ? "aucun" : modes.joined(separator: ", ")
