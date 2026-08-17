@@ -1,33 +1,40 @@
+// Une session tmux : son nom en mono, son âge, et « suivie ailleurs » quand
+// un autre terminal la regarde — probablement la plus vivante.
 #if canImport(SwiftUI)
 import SwiftUI
 import VigieNoyau
 
-/// Une ligne de la liste des sessions tmux : nom, état d'attache, âge.
 struct CarteSession: View {
     let session: SessionTmuxApi
 
     var body: some View {
-        CarteVigie {
-            HStack(spacing: Espace.standard) {
-                PointVital(etat: session.attached ? .sain : .neutre, vivant: session.attached)
+        Panneau {
+            HStack(spacing: Trame.element) {
+                Image(systemName: "terminal.fill")
+                    .font(.system(size: 15))
+                    .foregroundStyle(Teinte.veille)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(session.name)
-                        .monoDonnee()
-                        .foregroundStyle(Couleurs.encre)
-                    Text(age)
-                        .legende()
-                        .foregroundStyle(Couleurs.texteTertiaire)
+                        .donnee()
+                        .foregroundStyle(Teinte.encre)
+                    Text("ouverte \(age)")
+                        .mention()
+                        .foregroundStyle(Teinte.encreTernie)
                 }
-                Spacer(minLength: Espace.standard)
-                PastilleEtat(session.attached ? "Attachée" : "Détachée", etat: session.attached ? .sain : .neutre)
+                Spacer(minLength: 0)
+                if session.attached {
+                    Sceau("suivie ailleurs", ton: .sain)
+                }
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(Couleurs.texteTertiaire)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(Teinte.encreTernie)
             }
         }
     }
 
-    /// `created` est en secondes epoch (tmux), `Fraicheur` attend une `Date`.
+    /// `☠` `created` est en SECONDES — tmux les rend ainsi, tout le reste du
+    /// contrat est en millisecondes. Les mélanger a déjà produit un « reset
+    /// dans 495278229 h » sur ce produit.
     private var age: String {
         Fraicheur.texte(depuis: Date(timeIntervalSince1970: Double(session.created)))
     }

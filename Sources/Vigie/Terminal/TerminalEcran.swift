@@ -1,20 +1,10 @@
 #if canImport(SwiftUI)
+import Foundation
 import SwiftUI
 import VigieNoyau
 
 /// Le terminal tmux — là où un client natif écrase le plus nettement Safari
-/// mobile : envoyer un Ctrl-C à tmux depuis un navigateur mobile est
-/// simplement impossible.
-///
-/// Contrat de cette racine, tenu par `Domaine.racine` :
-///  - elle s'instancie SANS argument ;
-///  - tout ce dont elle a besoin vient de l'environnement :
-///    `@Environment(\.clientPi)`, `@Environment(\.miroir)`,
-///    `@Environment(Cadence.self)`, `@Environment(Liaison.self)` ;
-///  - elle lit le miroir AVANT le réseau, et n'affiche jamais d'attente quand
-///    une donnée datée existe ;
-///  - elle se branche sur la minuterie par `.cadencePar("terminal") { … }`,
-///    jamais par un `Timer` à elle.
+/// mobile : envoyer un Ctrl-C à tmux depuis un navigateur est impossible.
 public struct TerminalEcran: View {
     @Environment(\.clientPi) private var client
     @Environment(\.miroir) private var miroir
@@ -23,10 +13,10 @@ public struct TerminalEcran: View {
     @State private var sessions: [SessionTmuxApi] = []
     @State private var releveA: Date?
     @State private var posteAbsent = false
-    @State private var messageAvertissement: String?
-    @State private var feuilleNouvelleSession = false
+    @State private var avertissement: String?
+    @State private var feuilleNouvelle = false
     @State private var sessionATerminer: String?
-    @State private var toast: String?
+    @State private var avis: String?
 
     public init() {}
 
@@ -36,14 +26,16 @@ public struct TerminalEcran: View {
             corps
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .background(Couleurs.fond)
+        .background(Teinte.fond)
         .task { await relireLeMiroir() }
         .cadencePar("terminal") { await battre() }
-        .navigationDestination(for: String.self) { nom in SessionEcran(nom: nom) }
-        .feuille(presentee: $feuilleNouvelleSession) {
+        .avisFugace($avis)
+        .navigationDestination(for: String.self) { nom in
+            SessionEcran(nom: nom).toolbar(.hidden, for: .navigationBar)
+        }
+        .feuilleQuart(presentee: $feuilleNouvelle, hauteurs: [.medium]) {
             NouvelleSessionFeuille(creer: creerSession)
         }
-        .toastVigie(message: $toast)
         .confirmationDialog(
             "Terminer la session « \(sessionATerminer ?? "") » ?",
             isPresented: presenceSessionATerminer,
@@ -57,117 +49,82 @@ public struct TerminalEcran: View {
     }
 
     private var entete: some View {
-        EnteteDomaine(.terminal, releveA: releveA) {
+        EnTeteEcran("Terminal", releveA: releveA) {
             Button {
-                feuilleNouvelleSession = true
+                feuilleNouvelle = true
             } label: {
                 Image(systemName: "plus.circle.fill")
-                    .foregroundStyle(Couleurs.accentPrimaire)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.allureIcone)
+            .foregroundStyle(Teinte.accent)
             .accessibilityLabel("Nouvelle session")
         }
     }
 
     private var presenceSessionATerminer: Binding<Bool> {
-        Binding(get: { sessionATerminer != nil }, set: { present in if !present { sessionATerminer = nil } })
+        Binding(
+            get: { sessionATerminer != nil },
+            set: { present in if !present { sessionATerminer = nil } }
+        )
     }
 
-    // MARK: - Composition
+    // MARK: - Corps
 
     private var corps: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: Espace.section) {
-                avertissement
-                sectionSessions
+            VStack(alignment: .leading, spacing: Trame.element) {
+                if let avertissement, !sessions.isEmpty {
+                    BandeauNote(avertissement, ton: posteAbsent ? .veille : .vigilance)
+                }
+                contenu
             }
-            .padding(.horizontal, Espace.ecran)
-            .padding(.bottom, Espace.section)
+            .padding(.horizontal, Trame.ecran)
+            .padding(.bottom, Trame.section)
         }
         .scrollIndicators(.hidden)
         .refreshable { await battre() }
     }
 
-    /// Un poste absent ou un refus ponctuel appartiennent ici seulement quand
-    /// la liste n'est pas vide — sinon `contenuListe` porte déjà le message.
-    @ViewBuilder private var avertissement: some View {
-        if let messageAvertissement, !sessions.isEmpty {
-            BandeauAlerte(messageAvertissement, etat: posteAbsent ? .neutre : .vigilance)
-        }
-    }
-
-    private var sectionSessions: some View {
-        SectionVigie("Sessions tmux") {
-            contenuListe
-        } accessoire: {
-            if !sessions.isEmpty {
-                PastilleEtat("\(sessions.count)", etat: .neutre)
-            }
-        }
-    }
-
-    @ViewBuilder private var contenuListe: some View {
+    @ViewBuilder private var contenu: some View {
         if !sessions.isEmpty {
-            listeCartes
-        } else if releveA == nil, messageAvertissement == nil {
-            attente
+            ForEach(Array(sessions.enumerated()), id: \.element.id) { rang, session in
+                carte(session, rang: rang)
+            }
+        } else if releveA == nil, avertissement == nil {
+            ForEach(0..<3, id: \.self) { rang in
+                Panneau { SilhouetteAttente(lignes: [0.45, 0.7]) }
+                    .entreeEnScene(rang: rang)
+            }
         } else if posteAbsent {
-            EtatVide(
+            EtatCalme(
                 symbole: "moon.zzz.fill",
                 titre: "Poste éteint",
-                explication: messageAvertissement
-                    ?? "Le poste de travail ne répond pas. Les sessions réapparaîtront à son réveil."
+                explication: avertissement
+                    ?? "Le poste ne répond pas. Les sessions réapparaîtront à son réveil."
             )
-        } else if let messageAvertissement {
-            BandeauAlerte(messageAvertissement, etat: .danger)
+        } else if let avertissement {
+            BandeauNote(avertissement, ton: .danger)
         } else {
-            EtatVide(
+            EtatCalme(
                 symbole: "terminal.fill",
                 titre: "Aucune session",
-                explication: "Lance une session tmux pour ouvrir un terminal depuis ton téléphone."
+                explication: "Lance une session tmux pour ouvrir un terminal depuis ton téléphone.",
+                ton: .neutre
             )
         }
     }
 
-    private var listeCartes: some View {
-        VStack(spacing: Espace.standard) {
-            ForEach(Array(sessions.enumerated()), id: \.element.id) { rang, session in
-                HStack(spacing: Espace.serre) {
-                    NavigationLink(value: session.name) {
-                        CarteSession(session: session)
-                    }
-                    .buttonStyle(.plain)
-                    Button {
-                        sessionATerminer = session.name
-                    } label: {
-                        Image(systemName: "xmark.circle")
-                            .font(.system(size: 15, weight: .medium))
-                            .foregroundStyle(Couleurs.texteTertiaire)
-                            .frame(width: 34, height: 34)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Terminer \(session.name)")
-                }
-                .apparitionDouce(rang: rang)
+    private func carte(_ session: SessionTmuxApi, rang: Int) -> some View {
+        NavigationLink(value: session.name) {
+            CarteSession(session: session)
+        }
+        .buttonStyle(.allureCarte)
+        .contextMenu {
+            Button("Terminer la session", systemImage: "xmark.circle", role: .destructive) {
+                sessionATerminer = session.name
             }
         }
-    }
-
-    /// Trois silhouettes de cartes plutôt qu'un tourniquet : l'écran montre la
-    /// forme de ce qui arrive, comme le fait Quart au tout premier lancement.
-    private var attente: some View {
-        VStack(spacing: Espace.standard) {
-            ForEach(0..<3, id: \.self) { rang in
-                CarteVigie {
-                    HStack(spacing: Espace.standard) {
-                        SqueletteVigie(hauteur: 11).frame(width: 90)
-                        Spacer(minLength: 0)
-                        SqueletteVigie(hauteur: 18).frame(width: 60)
-                    }
-                }
-                .apparitionDouce(rang: rang)
-            }
-        }
+        .entreeEnScene(rang: rang)
     }
 
     // MARK: - Relevés
@@ -183,19 +140,19 @@ public struct TerminalEcran: View {
         case .fraiche(let charge):
             sessions = TriSessions.triees(charge.sessions ?? [])
             posteAbsent = false
-            messageAvertissement = nil
+            avertissement = nil
             releveA = Date()
         case .pcAbsent(let message):
             posteAbsent = true
-            messageAvertissement = message
+            avertissement = message
         case .refus(let message):
             posteAbsent = false
-            messageAvertissement = message
+            avertissement = message
         case .echec(let erreur) where erreur.genre != .transport:
             posteAbsent = false
-            messageAvertissement = erreur.message
+            avertissement = erreur.message
         case .echec:
-            break // panne de transport : le bandeau de liaison le dit déjà
+            break // panne de transport : l'en-tête la dit déjà
         }
     }
 
@@ -205,15 +162,13 @@ public struct TerminalEcran: View {
         let nomFinal = nom.trimmingCharacters(in: .whitespaces).isEmpty ? "claude" : nom
         switch await client.ordonner(OrdrePosteApi.self, Route.lancerSession(nomFinal)) {
         case .fraiche:
-            feuilleNouvelleSession = false
-            toast = "Session \(nomFinal) lancée"
+            feuilleNouvelle = false
+            avis = "Session \(nomFinal) lancée"
             cadence.battreMaintenant("terminal")
-        case .pcAbsent(let message):
-            toast = message
-        case .refus(let message):
-            toast = message
+        case .pcAbsent(let message), .refus(let message):
+            avis = message
         case .echec(let erreur):
-            toast = erreur.genre == .transport ? nil : erreur.message
+            if erreur.genre != .transport { avis = erreur.message }
         }
     }
 
@@ -221,13 +176,11 @@ public struct TerminalEcran: View {
         switch await client.ordonner(OrdrePosteApi.self, Route.tuerSession(nom)) {
         case .fraiche:
             sessions.removeAll { $0.name == nom }
-            toast = "Session \(nom) terminée"
-        case .pcAbsent(let message):
-            toast = message
-        case .refus(let message):
-            toast = message
+            avis = "Session \(nom) terminée"
+        case .pcAbsent(let message), .refus(let message):
+            avis = message
         case .echec(let erreur):
-            toast = erreur.genre == .transport ? nil : erreur.message
+            if erreur.genre != .transport { avis = erreur.message }
         }
         cadence.battreMaintenant("terminal")
     }

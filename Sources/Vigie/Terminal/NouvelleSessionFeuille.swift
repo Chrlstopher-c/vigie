@@ -1,9 +1,8 @@
+// Feuille de lancement d'une session tmux. Un seul champ : le nom, avec
+// « claude » en repli — le nom que pi-web donne par défaut.
 #if canImport(SwiftUI)
 import SwiftUI
 
-/// Feuille de lancement d'une session tmux. Un seul champ : le nom, avec
-/// « claude » en repli — c'est le nom que `pi-web` donne par défaut, et le cas
-/// dominant sur ce produit.
 struct NouvelleSessionFeuille: View {
     let creer: @MainActor (String) async -> Void
 
@@ -12,37 +11,34 @@ struct NouvelleSessionFeuille: View {
     @FocusState private var enFocus: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Espace.section) {
+        VStack(alignment: .leading, spacing: Trame.bloc) {
             Text("Nouvelle session")
-                .titreModale()
-                .foregroundStyle(Couleurs.encre)
-            ChampSaisie(
+                .titreFeuille()
+                .foregroundStyle(Teinte.encre)
+            ChampQuart(
                 "Nom",
                 texte: $nom,
                 placebo: "claude",
-                aide: "Laissé vide, la session s'appellera « claude ».",
-                lignes: 1...1
+                aide: "Laissé vide, la session s'appellera « claude »."
             )
             .focused($enFocus)
+            .textInputAutocapitalization(.never)
+            .autocorrectionDisabled()
             Button {
                 Task { await lancer() }
             } label: {
-                Group {
-                    if enCours {
-                        ProgressView().tint(.white)
-                    } else {
-                        Text("Lancer")
-                    }
+                HStack(spacing: Trame.serre) {
+                    if enCours { SouffleActivite(teinte: Teinte.encreSurAccent) }
+                    Text(enCours ? "Lancement…" : "Lancer")
                 }
-                .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.vigieAccent)
+            .buttonStyle(.allureAccent)
             .disabled(enCours)
             Spacer(minLength: 0)
         }
-        .padding(Espace.ecran)
+        .padding(Trame.ecran)
         .task { enFocus = true }
-        .congedieLeClavierSansDefilement()
+        .rendLeClavierSansDefilement()
     }
 
     @MainActor private func lancer() async {

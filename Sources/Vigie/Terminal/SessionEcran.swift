@@ -2,13 +2,12 @@
 import SwiftUI
 import VigieNoyau
 
-/// Le détail d'une session tmux : la capture du panneau, rafraîchie tant que
-/// l'écran est regardé, et le composeur qui envoie au shell distant.
+/// Le détail d'une session tmux : la capture du panneau rafraîchie à 400 ms
+/// tant que l'écran est regardé, le composeur, et la barre de touches.
 ///
-/// `☠` Régime `.generation` (400 ms) plutôt que `.repos` : c'est le seul autre
-/// endroit de l'app, avec un fil en train de générer, où quelqu'un regarde
-/// l'écran changer en direct. Se désabonne automatiquement en quittant l'écran
-/// (`cadencePar`), donc jamais actif en même temps que la liste.
+/// `☠` Régime `.generation` : le seul autre endroit de l'app, avec un fil en
+/// train de générer, où quelqu'un regarde l'écran changer en direct. Le
+/// désabonnement est automatique en quittant l'écran (`cadencePar`).
 struct SessionEcran: View {
     let nom: String
 
@@ -20,18 +19,18 @@ struct SessionEcran: View {
     @State private var captureEpuree = ""
     @State private var releveA: Date?
     @State private var posteAbsent = false
-    @State private var messageAvertissement: String?
+    @State private var avertissement: String?
     @State private var saisie = ""
     @State private var enEnvoi = false
     @State private var ctrlArme = false
-    @State private var collePresenceBas = true
+    @State private var colleBas = true
     @State private var confirmationTerminer = false
-    @State private var toast: String?
+    @State private var avis: String?
 
-    private static let ancreBas = "ancre-bas"
-    private static let seuilPresenceBas: CGFloat = 48
+    private static let ancreBas = "terminal.bas"
+    private static let seuilColle: CGFloat = 48
 
-    private var identifiantCadence: String { "terminal-session-\(nom)" }
+    private var identifiantCadence: String { "terminal.session.\(nom)" }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -39,11 +38,10 @@ struct SessionEcran: View {
             panneauCapture
             composeur
         }
-        .background(Couleurs.fond)
+        .background(Teinte.fond)
         .task { await relireLeMiroir() }
         .cadencePar(identifiantCadence, regime: .generation) { await battre() }
-        .congedieLeClavier()
-        .toastVigie(message: $toast)
+        .avisFugace($avis)
         .confirmationDialog(
             "Terminer la session « \(nom) » ?",
             isPresented: $confirmationTerminer,
@@ -54,17 +52,15 @@ struct SessionEcran: View {
         }
     }
 
-    // MARK: - En-tête
-
     private var entete: some View {
-        EnteteDomaine(titre: nom, releveA: releveA) {
+        EnTeteEcran(nom, releveA: releveA, retour: true) {
             Button {
                 confirmationTerminer = true
             } label: {
                 Image(systemName: "xmark.circle")
-                    .foregroundStyle(Couleurs.etatDanger)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.allureIcone)
+            .foregroundStyle(Teinte.danger)
             .accessibilityLabel("Terminer la session")
         }
     }
@@ -72,147 +68,135 @@ struct SessionEcran: View {
     // MARK: - Capture
 
     private var panneauCapture: some View {
-        ScrollViewReader { proxy in
+        ScrollViewReader { defilement in
             ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: 0) {
+                VStack(alignment: .leading, spacing: 0) {
                     contenuCapture
                     Color.clear.frame(height: 1).id(Self.ancreBas)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .background(Couleurs.terminalFond)
+            .background(Teinte.terminalFond)
             .onScrollGeometryChange(for: CGFloat.self) { geometrie in
                 geometrie.contentSize.height - geometrie.contentOffset.y - geometrie.containerSize.height
             } action: { _, distance in
-                collePresenceBas = distance < Self.seuilPresenceBas
+                colleBas = distance < Self.seuilColle
             }
             .onChange(of: captureEpuree) { _, _ in
-                guard collePresenceBas else { return }
-                withAnimation(Ressort.direct) { proxy.scrollTo(Self.ancreBas, anchor: .bottom) }
+                guard colleBas else { return }
+                defilement.scrollTo(Self.ancreBas, anchor: .bottom)
             }
-            .overlay(alignment: .bottomTrailing) { boutonRetourBas(proxy) }
+            .overlay(alignment: .bottomTrailing) { boutonRetourBas(defilement) }
         }
         .frame(maxHeight: .infinity)
     }
 
     @ViewBuilder private var contenuCapture: some View {
         if captureEpuree.isEmpty, releveA == nil {
-            silhouetteCapture
+            silhouette
         } else if captureEpuree.isEmpty {
             panneauVide
         } else {
-            ZoneTerminal(captureEpuree, repliement: false)
+            Text(captureEpuree)
+                .texteTerminal()
+                .foregroundStyle(Teinte.terminalTexte)
+                .textSelection(.enabled)
+                .padding(Trame.element)
         }
     }
 
-    /// Ni tourniquet ni bloc vide : trois barres qui respirent, dans les
-    /// teintes du terminal — les jetons de la charte sont calibrés pour le
-    /// fond crème, `SqueletteVigie` s'y lirait mal sur `terminalFond`.
-    private var silhouetteCapture: some View {
+    /// Des barres qui respirent dans les teintes du terminal — jamais un
+    /// tourniquet sur ce fond presque noir.
+    private var silhouette: some View {
         VStack(alignment: .leading, spacing: 10) {
-            ForEach(Array(largeursSilhouette.enumerated()), id: \.offset) { _, largeur in
+            ForEach(Array([0.7, 0.45, 0.85, 0.3, 0.6].enumerated()), id: \.offset) { _, part in
                 RoundedRectangle(cornerRadius: 3, style: .continuous)
-                    .fill(Couleurs.terminalTexte.opacity(0.14))
-                    .frame(width: largeur, height: 12)
+                    .fill(Teinte.terminalTexte.opacity(0.12))
+                    .frame(width: 220 * part, height: 11)
             }
         }
-        .padding(Espace.ecran)
-        .pulsationVitale()
-    }
-
-    private var largeursSilhouette: [CGFloat] {
-        [0.7, 0.45, 0.85, 0.3, 0.6, 0.5].map { 220 * $0 }
+        .padding(Trame.ecran)
     }
 
     private var panneauVide: some View {
-        VStack(spacing: Espace.standard) {
+        VStack(spacing: Trame.element) {
             Image(systemName: "terminal")
                 .font(.system(size: 22, weight: .light))
-                .foregroundStyle(Couleurs.terminalTexte.opacity(0.4))
+                .foregroundStyle(Teinte.terminalTexte.opacity(0.4))
             Text("Panneau vide")
-                .font(.system(size: 12.5, weight: .medium))
-                .foregroundStyle(Couleurs.terminalTexte.opacity(0.7))
+                .note()
+                .foregroundStyle(Teinte.terminalTexte.opacity(0.7))
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 40)
     }
 
-    private func boutonRetourBas(_ proxy: ScrollViewProxy) -> some View {
-        Group {
-            if !collePresenceBas, !captureEpuree.isEmpty {
-                Button {
-                    withAnimation(Ressort.direct) { proxy.scrollTo(Self.ancreBas, anchor: .bottom) }
-                    collePresenceBas = true
-                } label: {
-                    Image(systemName: "arrow.down")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(Couleurs.texteSurSombre)
-                        .frame(width: 34, height: 34)
-                        .background(Couleurs.encre, in: Circle())
-                }
-                .accessibilityLabel("Revenir au bas du panneau")
-                .padding(12)
-                .ombreFlottante()
-                .transition(.scale.combined(with: .opacity))
+    @ViewBuilder private func boutonRetourBas(_ defilement: ScrollViewProxy) -> some View {
+        if !colleBas, !captureEpuree.isEmpty {
+            Button {
+                defilement.scrollTo(Self.ancreBas, anchor: .bottom)
+                colleBas = true
+            } label: {
+                Image(systemName: "arrow.down")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Teinte.encre)
+                    .frame(width: 36, height: 36)
+                    .background(Teinte.surfaceHaute, in: Circle())
+                    .overlay(Circle().strokeBorder(Teinte.filetAppuye, lineWidth: Trame.trait))
             }
+            .buttonStyle(.allureIcone)
+            .padding(Trame.element)
+            .transition(.scale.combined(with: .opacity))
+            .accessibilityLabel("Revenir au bas du panneau")
         }
-        .animation(Ressort.direct, value: collePresenceBas)
     }
 
     // MARK: - Composeur
 
     private var composeur: some View {
         VStack(spacing: 0) {
-            if let messageAvertissement {
-                BandeauAlerte(messageAvertissement, etat: posteAbsent ? .neutre : .vigilance)
-                    .padding(.horizontal, Espace.ecran)
-                    .padding(.top, Espace.serre)
+            if let avertissement {
+                BandeauNote(avertissement, ton: posteAbsent ? .veille : .vigilance)
+                    .padding(.horizontal, Trame.ecran)
+                    .padding(.top, Trame.serre)
             }
             ligneSaisie
-            if ctrlArme {
-                RangeeControleArme(annuler: { ctrlArme = false }, envoyer: envoyerSequence)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-            }
-            BarreTerminal(envoyer: gererToucheBarre)
+            BarreTouches(
+                ctrlArme: ctrlArme,
+                basculerCtrl: { ctrlArme.toggle() },
+                envoyer: { sequence in
+                    ctrlArme = false
+                    await envoyer(sequence)
+                }
+            )
         }
-        .background(Couleurs.fond)
-        .animation(Ressort.direct, value: ctrlArme)
+        .background(Teinte.fond)
+        .animation(Elan.pose, value: avertissement)
     }
 
     private var ligneSaisie: some View {
-        HStack(alignment: .bottom, spacing: Espace.serre) {
-            ChampSaisie(texte: $saisie, placebo: "Commande…", lignes: 1...4)
+        HStack(alignment: .bottom, spacing: Trame.serre) {
+            ChampQuart(texte: $saisie, placebo: "Commande…", lignes: 1...4)
+                .font(Typo.donnee)
             Button {
                 Task { await envoyerCommande() }
             } label: {
-                if enEnvoi {
-                    ProgressView().tint(.white)
-                } else {
-                    Image(systemName: "arrow.up")
-                }
+                Image(systemName: "arrow.up")
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(Teinte.encreSurAccent)
+                    .frame(width: 38, height: 38)
+                    .background(saisieVide ? Teinte.surfaceHaute : Teinte.accent, in: Circle())
             }
-            .buttonStyle(.vigieAccent)
+            .buttonStyle(.plain)
             .disabled(saisieVide || enEnvoi)
-            .accessibilityLabel("Envoyer")
+            .accessibilityLabel("Envoyer la commande")
         }
-        .padding(.horizontal, Espace.ecran)
-        .padding(.top, Espace.standard)
-        .padding(.bottom, Espace.serre)
+        .padding(.horizontal, Trame.ecran)
+        .padding(.vertical, Trame.serre)
     }
 
     private var saisieVide: Bool {
         saisie.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    }
-
-    // MARK: - Barre d'accessoires
-
-    @MainActor private func gererToucheBarre(_ code: String) {
-        guard code != "ctrl" else {
-            ctrlArme.toggle()
-            return
-        }
-        ctrlArme = false
-        guard let touche = ToucheTerminal.pour(code: code) else { return }
-        Task { await envoyerSequence(touche.sequence) }
     }
 
     // MARK: - Relevés et écritures
@@ -224,23 +208,26 @@ struct SessionEcran: View {
     }
 
     @MainActor private func battre() async {
-        switch await client.lirePoste(CapturePosteApi.self, Route.capturerSession(nom), memoriser: .capture(session: nom)) {
+        let lecture = await client.lirePoste(
+            CapturePosteApi.self, Route.capturerSession(nom), memoriser: .capture(session: nom)
+        )
+        switch lecture {
         case .fraiche(let charge):
             appliquer(charge)
             posteAbsent = false
-            messageAvertissement = nil
+            avertissement = nil
             releveA = Date()
         case .pcAbsent(let message):
             posteAbsent = true
-            messageAvertissement = message
+            avertissement = message
         case .refus(let message):
             posteAbsent = false
-            messageAvertissement = message
+            avertissement = message
         case .echec(let erreur) where erreur.genre != .transport:
             posteAbsent = false
-            messageAvertissement = erreur.message
+            avertissement = erreur.message
         case .echec:
-            break // panne de transport : le bandeau de liaison le dit déjà
+            break // panne de transport : l'en-tête la dit déjà
         }
     }
 
@@ -259,20 +246,19 @@ struct SessionEcran: View {
         enEnvoi = false
     }
 
-    @MainActor private func envoyerSequence(_ sequence: String) async {
-        guard !sequence.isEmpty else { return }
-        await envoyer(sequence)
-    }
-
-    /// `☠` Le serveur ajoute TOUJOURS Entrée après 200 ms (`ToucheTerminal`) :
-    /// une touche de la barre valide donc autant qu'une commande tapée.
+    /// `☠` Le serveur ajoute TOUJOURS Entrée après 200 ms : une touche de la
+    /// barre valide autant qu'une commande tapée.
     @MainActor private func envoyer(_ octets: String) async {
+        guard !octets.isEmpty else { return }
         switch await client.ordonner(OrdrePosteApi.self, Route.envoyerAuTerminal(nom), ["keys": .texte(octets)]) {
-        case .fraiche: break
-        case .pcAbsent(let message): toast = message
-        case .refus(let message): toast = message
-        case .echec(let erreur) where erreur.genre != .transport: toast = erreur.message
-        case .echec: break
+        case .fraiche:
+            break
+        case .pcAbsent(let message), .refus(let message):
+            avis = message
+        case .echec(let erreur) where erreur.genre != .transport:
+            avis = erreur.message
+        case .echec:
+            break
         }
         cadence.battreMaintenant(identifiantCadence)
     }
