@@ -4,8 +4,8 @@ import VigieNoyau
 
 /// L'écran de session : le mot de passe, et l'adresse du Pi.
 ///
-/// L'adresse est ici et pas seulement dans les réglages, parce que c'est le seul
-/// écran atteignable quand rien ne répond. Un tunnel Cloudflare coupé se
+/// L'adresse est ici et pas seulement dans les réglages, parce que c'est le
+/// seul écran atteignable quand rien ne répond : un tunnel Cloudflare coupé se
 /// contourne en basculant sur l'adresse LAN — encore faut-il pouvoir la saisir
 /// sans passer par un écran qui exige une session.
 public struct EcranConnexion: View {
@@ -23,38 +23,47 @@ public struct EcranConnexion: View {
 
     public var body: some View {
         ZStack {
-            Couleurs.fond.ignoresSafeArea()
-            VStack(alignment: .leading, spacing: Espace.section) {
-                entete
-                formulaire
-                Spacer(minLength: 0)
+            Teinte.fond.ignoresSafeArea()
+            ScrollView {
+                VStack(alignment: .leading, spacing: Trame.section) {
+                    frontispice
+                    formulaire
+                }
+                .padding(.horizontal, Trame.ecran)
+                .padding(.top, Trame.section * 2)
             }
-            .padding(Espace.ecran)
+            .scrollIndicators(.hidden)
         }
-        .preferredColorScheme(.light)
+        .preferredColorScheme(.dark)
+        .rendLeClavier()
         .onAppear {
             adresse = cablage.adresse.absoluteString
             focusMotDePasse = true
         }
     }
 
-    private var entete: some View {
-        VStack(alignment: .leading, spacing: Espace.standard) {
-            Text("Vigie")
-                .titreEcran()
-                .foregroundStyle(Couleurs.encre)
-            Text("Le Pi demande le mot de passe de l'interface. Il est retenu par le "
-                 + "trousseau : cette saisie est la seule.")
-                .secondaire()
-                .foregroundStyle(Couleurs.texteSecondaire)
+    private var frontispice: some View {
+        VStack(alignment: .leading, spacing: Trame.serre) {
+            HStack(spacing: Trame.element) {
+                Image(systemName: "moon.stars.fill")
+                    .font(.system(size: 24, weight: .light))
+                    .foregroundStyle(Teinte.accent)
+                Text("Vigie")
+                    .font(.system(size: 40, weight: .semibold, design: .serif))
+                    .foregroundStyle(Teinte.encre)
+            }
+            Text("Le Pi demande le mot de passe de l'interface. Il est retenu "
+                + "par le trousseau : cette saisie est la seule.")
+                .note()
+                .foregroundStyle(Teinte.encreDouce)
         }
-        .padding(.top, Espace.section)
+        .entreeEnScene()
     }
 
     private var formulaire: some View {
-        CarteVigie {
-            VStack(alignment: .leading, spacing: Espace.carte) {
-                ChampSaisie(
+        Panneau {
+            VStack(alignment: .leading, spacing: Trame.bloc) {
+                ChampQuart(
                     "Adresse du Pi",
                     texte: $adresse,
                     placebo: "https://…",
@@ -65,29 +74,38 @@ public struct EcranConnexion: View {
                 .keyboardType(.URL)
 
                 champMotDePasse
-                if let erreur { BandeauAlerte(erreur, etat: .danger, symbole: "exclamationmark.triangle.fill") }
+                if let erreur { BandeauNote(erreur, ton: .danger) }
                 bouton
             }
         }
+        .entreeEnScene(rang: 1)
     }
 
     private var champMotDePasse: some View {
-        VStack(alignment: .leading, spacing: 5) {
+        VStack(alignment: .leading, spacing: Trame.fin + 1) {
             Text("Mot de passe")
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(Couleurs.texteSecondaire)
+                .insigne()
+                .foregroundStyle(Teinte.encreDouce)
             SecureField("", text: $motDePasse)
                 .textContentType(.password)
                 .focused($focusMotDePasse)
-                .corps()
-                .foregroundStyle(Couleurs.encre)
-                .padding(.horizontal, Espace.carte)
-                .padding(.vertical, Espace.standard)
-                .background(Couleurs.surface, in: RoundedRectangle(cornerRadius: Rayon.champ))
-                .overlay {
-                    RoundedRectangle(cornerRadius: Rayon.champ)
-                        .strokeBorder(Couleurs.filetAppuye, lineWidth: Trait.filet)
-                }
+                .phrase()
+                .foregroundStyle(Teinte.encre)
+                .tint(Teinte.accent)
+                .padding(.horizontal, Trame.element)
+                .padding(.vertical, Trame.serre + 2)
+                .background(
+                    Teinte.fondCreux,
+                    in: RoundedRectangle(cornerRadius: Galbe.encart, style: .continuous)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: Galbe.encart, style: .continuous)
+                        .strokeBorder(
+                            focusMotDePasse ? Teinte.accent.opacity(0.6) : Teinte.filetAppuye,
+                            lineWidth: Trame.trait
+                        )
+                )
+                .animation(Elan.vif, value: focusMotDePasse)
                 .onSubmit { Task { await ouvrir() } }
         }
     }
@@ -96,15 +114,17 @@ public struct EcranConnexion: View {
         Button {
             Task { await ouvrir() }
         } label: {
-            HStack(spacing: Espace.serre) {
-                if enCours { IndicateurActivite(diametre: 13) }
+            HStack(spacing: Trame.serre) {
+                if enCours { SouffleActivite(teinte: Teinte.encreSurAccent) }
                 Text(enCours ? "Ouverture…" : "Ouvrir la session")
             }
-            .frame(maxWidth: .infinity)
         }
-        .buttonStyle(.vigiePrimaire)
+        .buttonStyle(.allureAccent)
         .disabled(enCours || motDePasse.isEmpty)
+        .opacity(motDePasse.isEmpty ? 0.55 : 1)
     }
+
+    // MARK: - Logique (inchangée)
 
     private func ouvrir() async {
         guard !enCours, !motDePasse.isEmpty else { return }
