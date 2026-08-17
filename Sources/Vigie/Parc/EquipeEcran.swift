@@ -3,12 +3,12 @@ import Foundation
 import SwiftUI
 import VigieNoyau
 
-/// Le détail d'une équipe : son mandat, sa consommation, son fil, ses
-/// sous-agents, et les gestes de pilotage.
+/// Le détail d'une équipe : son état, ses gestes de pilotage, l'instruction
+/// qu'on lui glisse, sa consommation, son dépôt, ses sous-agents et son fil.
 ///
-/// `☠` Les gestes ne sont pas optimistes et ne recalculent aucun état : après
-/// une écriture, on relit la mission. Un bouton qui repeint l'écran tout seul
-/// finit par afficher une équipe en pause qui tourne encore.
+/// `☠` Les gestes ne sont pas optimistes : après une écriture, on relit la
+/// mission. Un bouton qui repeint l'écran tout seul finit par afficher une
+/// équipe en pause qui tourne encore.
 struct EquipeEcran: View {
     @Environment(\.clientPi) private var client
     @Environment(\.miroir) private var miroir
@@ -18,196 +18,107 @@ struct EquipeEcran: View {
     @State private var mission: MissionApi?
     @State private var releveA: Date?
     @State private var refus: ErreurApi?
-    @State private var geste: String?
+    @State private var gesteEnCours: String?
 
     var body: some View {
         VStack(spacing: 0) {
-            EnteteDomaine(titre: mission?.project ?? "Équipe", releveA: releveA)
+            EnTeteEcran(mission?.project ?? "Équipe", releveA: releveA, retour: true)
             corps
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .background(Couleurs.fond)
+        .background(Teinte.fond)
         .task { await ouvrir() }
         .cadencePar("equipe.\(identifiant)") { await battre() }
+        .rendLeClavier()
     }
 
     @ViewBuilder private var corps: some View {
         if let mission {
             ScrollView {
-                VStack(alignment: .leading, spacing: Espace.section) {
+                VStack(alignment: .leading, spacing: Trame.section) {
                     if let refus, refus.genre != .transport {
-                        BandeauAlerte(refus.message, etat: .vigilance)
+                        BandeauNote(refus.message, ton: .vigilance)
                     }
                     enTete(mission)
-                    GestesEquipe(mission: mission, enCours: $geste, apres: { await battre() })
-                    sectionMandat(mission)
-                    sectionConsommation(mission)
-                    sectionDepot(mission)
-                    sectionSousAgents(mission)
+                    GestesEquipe(mission: mission, enCours: $gesteEnCours, apres: { await battre() })
+                    InstructionEquipe(mission: mission, apres: { await battre() })
+                    SectionConsommation(mission: mission)
+                    SectionDepot(mission: mission)
+                    SectionSousAgents(mission: mission)
+                    SectionMandat(mission: mission)
                     sectionFil(mission)
                 }
-                .padding(.horizontal, Espace.ecran)
-                .padding(.vertical, Espace.standard)
+                .padding(.horizontal, Trame.ecran)
+                .padding(.bottom, Trame.section)
             }
             .scrollIndicators(.hidden)
             .refreshable { await battre() }
         } else if let refus {
-            BandeauAlerte(refus.message, etat: .danger)
-                .padding(Espace.ecran)
+            BandeauNote(refus.message, ton: .danger)
+                .padding(Trame.ecran)
+            Spacer(minLength: 0)
         } else {
-            CarteVigie { SqueletteVigie(hauteur: 15) }
-                .padding(Espace.ecran)
+            Panneau { SilhouetteAttente() }
+                .padding(Trame.ecran)
+            Spacer(minLength: 0)
         }
     }
 
-    // MARK: - Sections
+    // MARK: - En-tête
 
     private func enTete(_ mission: MissionApi) -> some View {
-        VStack(alignment: .leading, spacing: Espace.standard) {
+        let etat = EtatEquipe(mission.state)
+        return VStack(alignment: .leading, spacing: Trame.serre) {
             Text(mission.title)
-                .titreSection()
-                .foregroundStyle(Couleurs.encre)
-            HStack(spacing: Espace.serre) {
-                PastilleEtat(EtatEquipe(mission.state).libelle, etat: semantique(mission))
+                .titreFeuille()
+                .foregroundStyle(Teinte.encre)
+            HStack(spacing: Trame.serre) {
+                PointVeille(ton: ton(etat), vivant: etat.respire)
+                Sceau(etat.libelle, ton: ton(etat))
                 if let anciennete = EtatEquipe.anciennete(mission) {
                     Text(anciennete)
-                        .monoMinuscule()
-                        .foregroundStyle(Couleurs.texteTertiaire)
+                        .donneePetite()
+                        .foregroundStyle(Teinte.encreTernie)
                 }
                 Spacer(minLength: 0)
             }
-        }
-    }
-
-    private func sectionMandat(_ mission: MissionApi) -> some View {
-        SectionVigie("Mandat") {
-            CarteVigie {
-                VStack(spacing: 0) {
-                    LigneCleValeur("But", valeur: lisible(mission.mandate.but))
-                    LigneCleValeur("Critère d'arrêt", valeur: lisible(mission.mandate.critere))
-                    LigneCleValeur("Machine", valeur: mission.machine ?? "—")
-                    LigneCleValeur("Compte", valeur: mission.account)
-                    LigneCleValeur("Moteur", valeur: mission.model, derniere: true)
-                }
+            HStack(spacing: Trame.serre) {
+                if let machine = mission.machine { PuceDonnee(machine) }
+                PuceDonnee(mission.model)
+                PuceDonnee(mission.team)
+                PuceDonnee("relances \(mission.retries)")
             }
         }
     }
 
-    private func sectionConsommation(_ mission: MissionApi) -> some View {
-        SectionVigie("Consommation") {
-            CarteVigie {
-                VStack(alignment: .leading, spacing: Espace.standard) {
-                    JaugeQuota(
-                        "Contexte",
-                        utilisation: Double(mission.ctx) / 100,
-                        sousTexte: ConsommationEquipe.tokensLisibles(mission.ctxTokens)
-                    )
-                    LigneCleValeur("Dépense", valeur: ConsommationEquipe.montant(mission.cost))
-                    LigneCleValeur("Prochaine inspection", valeur: prochainSeuil(mission), derniere: true)
-                }
-            }
+    private func ton(_ etat: EtatEquipe) -> Ton {
+        switch etat.ton {
+        case .attente: return .attention
+        case .actif: return .sain
+        case .veille: return .veille
+        case .alerte: return .danger
+        case .clos, .neutre: return .neutre
         }
     }
 
-    /// `nil` = tous les paliers sont passés. Ce n'est pas une alerte, c'est une
-    /// échéance : aucun montant n'est mauvais en soi.
-    private func prochainSeuil(_ mission: MissionApi) -> String {
-        guard let seuil = ConsommationEquipe.prochainSeuil(mission.cost) else {
-            return "tous les paliers passés"
-        }
-        return ConsommationEquipe.montant(seuil)
-    }
-
-    private func sectionDepot(_ mission: MissionApi) -> some View {
-        let constat = ConstatDepot.lire(mission.git)
-        return SectionVigie("Dépôt") {
-            CarteVigie {
-                VStack(alignment: .leading, spacing: Espace.serre) {
-                    LigneCleValeur("Travail non commité", valeur: constat.valeur)
-                    LigneCleValeur("Branche", valeur: constat.releve?.branche ?? mission.branch)
-                    LigneCleValeur("Worktree", valeur: mission.worktree, derniere: true)
-                    if let avertissement = constat.avertissement {
-                        Text(avertissement)
-                            .legende()
-                            .foregroundStyle(EtatSemantique.vigilance.teinte)
-                    }
-                }
-            }
-        }
-    }
-
-    @ViewBuilder private func sectionSousAgents(_ mission: MissionApi) -> some View {
-        if !mission.subagents.isEmpty {
-            SectionVigie("Sous-agents") {
-                CarteVigie {
-                    VStack(spacing: 0) {
-                        ForEach(Array(mission.subagents.enumerated()), id: \.element.id) { rang, agent in
-                            LigneCleValeur(
-                                agent.name,
-                                valeur: agent.feedUnavailable ? "sans relevé" : agent.action,
-                                teinteValeur: agent.feedUnavailable
-                                    ? Couleurs.texteTertiaire : Couleurs.encre,
-                                derniere: rang == mission.subagents.count - 1
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    /// `☠` `FeedEventApi` n'a aucun identifiant : la clé est synthétisée par
-    /// `EvenementFilMission.indexer`, faute de quoi SwiftUI change l'identité
-    /// des lignes à chaque relevé — blocs repliés, défilement rejeté.
+    /// `☠` Le fil est vide sur la LISTE et rempli sur le DÉTAIL : il n'existe
+    /// qu'ici. Les identités des lignes sont synthétisées par le noyau —
+    /// sans elles, chaque relevé refermerait les blocs dépliés.
     @ViewBuilder private func sectionFil(_ mission: MissionApi) -> some View {
         if !mission.feed.isEmpty {
-            SectionVigie("Fil de l'équipe") {
-                CarteVigie {
-                    VStack(alignment: .leading, spacing: Espace.serre) {
-                        ForEach(Array(FeedEventApi.indexer(mission.feed).enumerated()),
-                                id: \.element.id) { (rang: Int, ligne: EvenementFilMission) in
-                            LigneFil(
-                                horodatage: ligne.evenement.ts,
-                                etiquette: ligne.evenement.tool,
-                                genre: genre(ligne.evenement),
-                                texte: LibelleOutil.resume(ligne.evenement),
-                                rang: rang
-                            )
-                        }
-                    }
-                }
+            VStack(alignment: .leading, spacing: Trame.element) {
+                TeteDeSection("Fil de l'équipe")
+                VueFilMission(
+                    segments: SegmentationMission.segmenter(mission.feed),
+                    sousAgents: mission.subagents,
+                    missionId: mission.id,
+                    partiel: mission.partial
+                )
             }
         }
     }
 
     // MARK: - Relevés
-
-    private func lisible(_ texte: String) -> String {
-        texte.isEmpty ? "—" : texte
-    }
-
-    /// `☠` Une autorisation RÉSOLUE SEULE par le lead et une autorisation qui
-    /// attend un arbitrage ne se peignent pas pareil : la seconde bloque le
-    /// travail, la première n'est qu'une trace.
-    private func genre(_ evenement: FeedEventApi) -> GenreEvenement {
-        switch evenement.type {
-        case .permission:
-            return evenement.pending == true ? .autorisationAttente : .autorisationAuto
-        case .systeme: return .systeme
-        case .instruction: return .instruction
-        default: return .activite
-        }
-    }
-
-    private func semantique(_ mission: MissionApi) -> EtatSemantique {
-        switch EtatEquipe(mission.state).ton {
-        case .attente: return .accent
-        case .actif: return .sain
-        case .veille: return .vigilance
-        case .alerte: return .danger
-        case .clos, .neutre: return .neutre
-        }
-    }
 
     private func ouvrir() async {
         guard let cache = await miroir.lire(MissionApi.self, .mission(identifiant)) else { return }

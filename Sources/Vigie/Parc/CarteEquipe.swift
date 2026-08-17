@@ -1,5 +1,5 @@
-// Une équipe dans la liste du parc : ce qu'elle fait, ce qu'elle coûte, ce
-// qu'elle risque de perdre.
+// La carte d'une équipe : ce qu'elle fait, ce qu'elle consomme, et ce qui
+// serait perdu — lisible sans l'ouvrir.
 #if canImport(SwiftUI)
 import SwiftUI
 import VigieNoyau
@@ -10,70 +10,64 @@ struct CarteEquipe: View {
     private var etat: EtatEquipe { EtatEquipe(mission.state) }
 
     var body: some View {
-        CarteVigie(relief: .bordee(semantique)) {
-            VStack(alignment: .leading, spacing: Espace.standard) {
+        Panneau(rail: etat.ton == .attente ? .attention : nil) {
+            VStack(alignment: .leading, spacing: Trame.serre) {
                 entete
-                Text(mission.title)
-                    .corpsAccentue()
-                    .foregroundStyle(Couleurs.encre)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
-                pied
+                mesures
                 if let avertissement = ConstatDepot.lire(mission.git).avertissement {
                     Text(avertissement)
-                        .legende()
-                        .foregroundStyle(EtatSemantique.vigilance.teinte)
+                        .mention()
+                        .foregroundStyle(Teinte.vigilance)
                 }
             }
         }
     }
 
     private var entete: some View {
-        HStack(spacing: Espace.serre) {
-            PointVital(etat: semantique, vivant: etat.respire)
-            Text(etat.libelle)
-                .etiquette()
-                .foregroundStyle(semantique.teinte)
+        HStack(alignment: .firstTextBaseline, spacing: Trame.serre) {
+            PointVeille(ton: ton, vivant: etat.respire)
+            Text(mission.title)
+                .phraseForte()
+                .foregroundStyle(Teinte.encre)
+                .lineLimit(2)
             Spacer(minLength: 0)
-            if let anciennete = EtatEquipe.anciennete(mission) {
-                Text(anciennete)
-                    .monoMinuscule()
-                    .foregroundStyle(Couleurs.texteTertiaire)
-            }
+            Sceau(etat.libelle, ton: ton)
         }
     }
 
-    private var pied: some View {
-        HStack(spacing: Espace.serre) {
-            PuceMono(mission.project)
-            if let machine = mission.machine { PuceMono(machine) }
+    private var mesures: some View {
+        HStack(spacing: Trame.serre) {
+            PuceDonnee(mission.project)
+            if let machine = mission.machine { PuceDonnee(machine) }
+            PuceDonnee(mission.team)
             Spacer(minLength: 0)
-            Text(ConsommationEquipe.montant(mission.cost))
-                .monoPetit()
-                .foregroundStyle(Couleurs.texteSecondaire)
-            Text(ConsommationEquipe.contexteLisible(mission))
-                .monoPetit()
+            Text(sousLigne)
+                .donneePetite()
                 .foregroundStyle(teinteContexte)
         }
     }
 
+    /// `☠` `ctx` sans relevé vaut 0 côté serveur : le mot remplace le chiffre —
+    /// « 0 % » se lirait « il reste tout », là où la vérité est « on ne sait
+    /// pas », et c'est là-dessus qu'on décide d'un atterrissage.
+    private var sousLigne: String {
+        let contexte = ConsommationEquipe.mesure(mission.ctxTokens) ? "ctx \(mission.ctx) %" : "ctx —"
+        return "\(contexte) · \(ConsommationEquipe.montant(mission.cost))"
+    }
+
     private var teinteContexte: Color {
-        guard ConsommationEquipe.mesure(mission.ctxTokens) else { return Couleurs.texteTertiaire }
         switch ConsommationEquipe.tonContexte(mission.ctx) {
-        case .alerte: return EtatSemantique.danger.teinte
-        case .veille: return EtatSemantique.vigilance.teinte
-        default: return Couleurs.texteSecondaire
+        case .alerte: return Teinte.danger
+        case .veille: return Teinte.vigilance
+        default: return Teinte.encreDouce
         }
     }
 
-    /// La traduction du ton d'équipe en couleur de charte. `☠` Terminée et
-    /// « au repos » restent NEUTRES : elles n'appellent rien, et c'est ce qui
-    /// rend les états qui appellent lisibles d'un coup d'œil.
-    private var semantique: EtatSemantique {
+    private var ton: Ton {
         switch etat.ton {
-        case .attente: return .accent
+        case .attente: return .attention
         case .actif: return .sain
-        case .veille: return .vigilance
+        case .veille: return .veille
         case .alerte: return .danger
         case .clos, .neutre: return .neutre
         }
