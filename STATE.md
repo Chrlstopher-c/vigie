@@ -4,28 +4,29 @@ Client iOS natif de ccremote. Plan de référence : `/home/trinity/PLAN-VIGIE.md
 (les **décisions de Chris du 2026-08-17**, en fin de document, priment sur tout
 le reste). Chaîne de compilation portée d'EchoLabs, bundle `com.echo.labs`.
 
-## Au 2026-08-17
+## Au 2026-08-17 — refonte « Quart de nuit »
 
-**L'application compile pour iOS et produit `xtool/Vigie.ipa`. 117 tests du
-noyau verts sur Arch (`swift test`). Aucun écran n'est plus une coquille vide.**
+**Frontend intégralement refondu (DA sombre, voir `Sources/Vigie/Charte/CHARTE.md`).
+Compile en `xtool/Vigie.ipa`, 117 tests du noyau verts. Toutes les capacités du
+contrat ont désormais une surface.**
 
 Ce qui existe, par domaine :
 
 | Domaine | État |
 |---|---|
-| `Charte/` | jetons, composants, ressorts, gestes, matières, clavier |
-| `Coquille/` | barre à 7 domaines, minuterie unique, câblage, délégué |
+| `Charte/` | « Quart de nuit » : Teinte/Typo/Trame/Elan/Haptique/Allures, composants, markdown partagé |
+| `Coquille/` | 5 onglets (Quart absorbe Décisions), barre badgée, minuterie unique |
 | `Lien/` | `ClientPi` (2 sessions), jeton en trousseau, refus de redirection |
-| `Quart/` | file du quart + pouls du parc |
-| `Decisions/` | file, cartes, garde Face ID, lecture des quatre 409 |
-| `Fil/` | liste, conversation segmentée, markdown, composeur, pièces |
-| `Parc/` | liste groupée, détail d'équipe, gestes de pilotage |
-| `Machines/` | santé, quotas, poste de travail (réveil, bascule de compte) |
-| `Terminal/` | sessions tmux, capture, barre d'accessoires |
-| `Alerte/` | veille audio, sondage, pose de locales, alarme de silence, BG |
-| `Reglages/` | serveur, alerte, orchestrateur, à propos |
+| `Quart/` | pièce d'entrée : file tranchable sur place + pouls + cloche + portillon |
+| `Decisions/` | cartes à rail, garde Face ID, quatre 409, tampon jusqu'au relevé |
+| `Fil/` | liste + création, conversation-document, moteur par message, tenue ⋯ (renommer/machine/autonomie/rappels/compacter/archiver) |
+| `Parc/` | fil segmenté en valises, sous-agents navigables, instruction au lead |
+| `Machines/` | jauges à seuils, quotas 5 h/7 j, réveil du poste |
+| `Terminal/` | ^C/^D armés, capture collée au bas, barre de touches |
+| `Alerte/` | canal + faits du parc (lu/remis distincts, marquer lu) |
+| `Reglages/` | serveur, orchestrateur, alerte, à propos + signature |
 | `Diagnostic/` | sonde de chaîne, écran caché (appui long sur la version) |
-| `VigieNoyau/` | contrat, miroir, veille, markdown, parc, machines, fil |
+| `VigieNoyau/` | contrat, miroir, veille, markdown, parc, machines, fil — intouché |
 
 ## Ce qui n'a JAMAIS été exercé
 

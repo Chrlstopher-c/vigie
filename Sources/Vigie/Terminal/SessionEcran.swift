@@ -176,8 +176,9 @@ struct SessionEcran: View {
 
     private var ligneSaisie: some View {
         HStack(alignment: .bottom, spacing: Trame.serre) {
-            ChampQuart(texte: $saisie, placebo: "Commande…", lignes: 1...4)
-                .font(Typo.donnee)
+            ChampQuart(texte: $saisie, placebo: "Commande…", lignes: 1...4, fonte: Typo.donnee)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
             Button {
                 Task { await envoyerCommande() }
             } label: {

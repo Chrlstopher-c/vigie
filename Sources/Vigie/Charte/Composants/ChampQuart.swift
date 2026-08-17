@@ -9,6 +9,8 @@ public struct ChampQuart: View {
     private let placebo: String
     private let aide: String?
     private let lignes: ClosedRange<Int>
+    /// La fonte de la saisie — `Typo.donnee` pour une commande de terminal.
+    private let fonte: Font
 
     @FocusState private var enFocus: Bool
 
@@ -17,13 +19,15 @@ public struct ChampQuart: View {
         texte: Binding<String>,
         placebo: String = "",
         aide: String? = nil,
-        lignes: ClosedRange<Int> = 1...1
+        lignes: ClosedRange<Int> = 1...1,
+        fonte: Font = Typo.phrase
     ) {
         self.etiquette = etiquette
         _texte = texte
         self.placebo = placebo
         self.aide = aide
         self.lignes = lignes
+        self.fonte = fonte
     }
 
     public var body: some View {
@@ -46,7 +50,7 @@ public struct ChampQuart: View {
         TextField(placebo, text: $texte, axis: lignes.upperBound > 1 ? .vertical : .horizontal)
             .lineLimit(lignes)
             .focused($enFocus)
-            .phrase()
+            .font(fonte)
             .foregroundStyle(Teinte.encre)
             .tint(Teinte.accent)
             .padding(.horizontal, Trame.element)
