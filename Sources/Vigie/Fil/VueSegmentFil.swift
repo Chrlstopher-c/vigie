@@ -1,5 +1,10 @@
-// Rendu d'un `SegmentFil` — la brique que le fil ouvert empile, dans l'ordre
-// que `SegmentationFil.segmenter` a déjà tranché.
+// Rendu d'un `SegmentFil` — la brique que la conversation empile, dans
+// l'ordre que `SegmentationFil.segmenter` a déjà tranché.
+//
+// Parti pris de la charte : la conversation est un DOCUMENT. Les tours de
+// l'orchestrateur se lisent pleine largeur, sans bulle — on vient lire du
+// markdown long, pas des SMS. Seules les interjections de Chris prennent une
+// bulle, à droite, pour que l'attribution se voie d'un coup d'œil.
 #if canImport(SwiftUI)
 import SwiftUI
 import VigieNoyau
@@ -7,103 +12,113 @@ import VigieNoyau
 struct VueSegmentFil: View {
     let segment: SegmentFil
     /// Croisement `PropositionApi` par identifiant, pour les segments `.mandat`.
-    /// Voir `VueMandatFil` : sans correspondance, la carte reste honnête.
     let propositionsConnues: [String: PropositionApi]
-    let rang: Int
 
     var body: some View {
-        Group {
-            switch segment {
-            case .operateur(let message):
-                VueMessageOperateur(message: message)
-            case .tour(let tour):
-                VueTourAgent(tour: tour)
-            case .mandat(_, let proposition, let at):
-                VueMandatFil(identifiant: proposition, at: at, connue: propositionsConnues[proposition])
-            case .compaction(_, let resume, let at):
-                VueCompaction(resume: resume, at: at)
-            }
+        switch segment {
+        case .operateur(let message):
+            VueMessageOperateur(message: message)
+        case .tour(let tour):
+            VueTourAgent(tour: tour)
+        case .mandat(_, let proposition, let at):
+            VueMandatFil(identifiant: proposition, at: at, connue: propositionsConnues[proposition])
+        case .compaction(_, let resume, let at):
+            VueCompaction(resume: resume, at: at)
         }
-        // `Ressort.cascade` (via `.arriveeParLeBas`) : chaque segment entre avec
-        // un léger décalage selon son rang, plafonné pour ne pas faire attendre
-        // le douzième message d'un long fil.
-        .arriveeParLeBas(rang: rang)
     }
 }
 
+/// L'interjection de Chris : bulle accent voilée, à droite, pièces au-dessus.
 private struct VueMessageOperateur: View {
     let message: MessageOperateur
 
     var body: some View {
-        VStack(alignment: .trailing, spacing: Espace.serre) {
+        VStack(alignment: .trailing, spacing: Trame.serre) {
             if !message.pieces.isEmpty { rangeePieces }
-            BulleUtilisateur(message.texte)
+            Text(message.texte)
+                .phrase()
+                .foregroundStyle(Teinte.encre)
+                .padding(.horizontal, Trame.element)
+                .padding(.vertical, Trame.serre + 2)
+                .background(
+                    Teinte.accent.opacity(0.16),
+                    in: UnevenRoundedRectangle(
+                        topLeadingRadius: 16, bottomLeadingRadius: 16,
+                        bottomTrailingRadius: 5, topTrailingRadius: 16,
+                        style: .continuous
+                    )
+                )
+            Text(heureFil(message.at))
+                .donneeMinuscule()
+                .foregroundStyle(Teinte.encreTernie)
         }
+        .frame(maxWidth: .infinity, alignment: .trailing)
+        .padding(.leading, 44)
     }
 
     private var rangeePieces: some View {
-        HStack(spacing: Espace.serre) {
+        HStack(spacing: Trame.serre) {
             Spacer(minLength: 0)
             ForEach(message.pieces, id: \.url) { piece in
                 VignettePieceDistante(piece: piece)
             }
         }
-        .padding(.leading, 54)
     }
 }
 
+/// Un tour de l'orchestrateur : ses blocs pleine largeur, puis l'attribution
+/// en pied — modèle, effort, heure de fin.
 private struct VueTourAgent: View {
     let tour: TourAgent
 
     var body: some View {
-        BulleAgent {
-            VStack(alignment: .leading, spacing: Espace.standard) {
-                ForEach(tour.blocs) { bloc in
-                    VueBlocAgent(bloc: bloc)
-                }
-                if let modele = tour.modele {
-                    Text(LisibleMoteur.moteur(modele: modele, effort: tour.effort))
-                        .monoMinuscule()
-                        .foregroundStyle(Couleurs.texteTertiaire)
-                }
+        VStack(alignment: .leading, spacing: Trame.element) {
+            ForEach(tour.blocs) { bloc in
+                VueBlocAgent(bloc: bloc)
             }
+            pied
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// `☠` L'attribution est PAR TOUR, jamais le dernier réglage en date :
+    /// relire un fil où l'on a changé de modèle doit montrer ce qui a
+    /// réellement produit chaque réponse.
+    private var pied: some View {
+        HStack(spacing: Trame.fin) {
+            if let modele = tour.modele {
+                Text(Lisible.moteur(modele: modele, effort: tour.effort))
+            }
+            Text("— \(heureFil(tour.finA))")
+        }
+        .donneeMinuscule()
+        .foregroundStyle(Teinte.encreTernie)
     }
 }
 
-/// `résumé du fil compacté` — un filet et une ligne centrée, jamais une bulle :
-/// ce n'est ni Chris ni l'agent qui parle, c'est un fait d'administration.
+/// Le fil compacté — un fait d'administration : filet et ligne centrée,
+/// jamais une bulle, ce n'est ni Chris ni l'agent qui parle.
 private struct VueCompaction: View {
     let resume: String
     let at: Int
 
     var body: some View {
-        VStack(spacing: Espace.fin) {
-            HStack(spacing: Espace.serre) {
-                FiletHorizontal()
-                Text("Fil compacté · \(heureFil(at))")
-                    .legende()
-                    .foregroundStyle(Couleurs.texteTertiaire)
+        VStack(spacing: Trame.fin) {
+            HStack(spacing: Trame.serre) {
+                FiletFin()
+                Text("fil compacté · \(heureFil(at))")
+                    .mention()
+                    .foregroundStyle(Teinte.encreTernie)
                     .fixedSize()
-                FiletHorizontal()
+                FiletFin()
             }
             if !resume.isEmpty {
                 Text(resume)
-                    .secondaire()
-                    .foregroundStyle(Couleurs.texteSecondaire)
+                    .note()
+                    .foregroundStyle(Teinte.encreDouce)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
-        .apparitionDouce()
-    }
-}
-
-/// Le couple modèle / effort d'un tour — repris de `Decisions/Lisible.swift`
-/// dans sa forme, pas dans son code : deux domaines qui ne s'importent pas.
-private enum LisibleMoteur {
-    static func moteur(modele: String, effort: String?) -> String {
-        guard let effort else { return modele }
-        return "\(modele) · \(effort)"
     }
 }
 #endif

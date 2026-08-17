@@ -104,6 +104,43 @@ public struct AllureRangee: ButtonStyle {
     }
 }
 
+/// Petit bouton en rangée : épouse son contenu, 32 pt de haut. Le ton colore
+/// l'encre et le voile — `.neutre` rend un bouton de surface.
+public struct AllurePuce: ButtonStyle {
+    private let ton: Ton
+
+    public init(ton: Ton = .neutre) {
+        self.ton = ton
+    }
+
+    public func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 12.5, weight: .semibold))
+            .foregroundStyle(ton == .neutre ? Teinte.encre : ton.teinte)
+            .padding(.horizontal, Trame.element)
+            .frame(minHeight: 32)
+            .background(
+                ton == .neutre
+                    ? (configuration.isPressed ? Teinte.surfaceHaute : Teinte.surface)
+                    : ton.teinte.opacity(configuration.isPressed ? 0.24 : 0.14),
+                in: Capsule()
+            )
+            .overlay(
+                Capsule().strokeBorder(
+                    ton == .neutre ? Teinte.filetAppuye : .clear,
+                    lineWidth: Trame.trait
+                )
+            )
+            .scaleEffect(configuration.isPressed ? 0.96 : 1)
+            .animation(Elan.vif, value: configuration.isPressed)
+    }
+}
+
+extension ButtonStyle where Self == AllurePuce {
+    public static var allurePuce: AllurePuce { AllurePuce() }
+    public static func allurePuce(_ ton: Ton) -> AllurePuce { AllurePuce(ton: ton) }
+}
+
 extension ButtonStyle where Self == AllureAccent {
     public static var allureAccent: AllureAccent { AllureAccent() }
 }

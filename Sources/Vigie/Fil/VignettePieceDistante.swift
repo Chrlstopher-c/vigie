@@ -1,9 +1,8 @@
 // Vignette d'une pièce jointe déjà servie par le Pi.
 //
 // `☠` `PieceJointeApi.url` est LA SEULE route du contrat qui rend des octets,
-// et elle est protégée par cookie de session (voir `ClientPi.octets`). Un
-// `AsyncImage` nu échouerait dessus — d'où ce chargeur qui passe par le client
-// unique plutôt que par `URLSession.shared`.
+// protégée par cookie de session (`ClientPi.octets`). Un `AsyncImage` nu
+// échouerait dessus — d'où ce chargeur qui passe par le client unique.
 #if canImport(SwiftUI)
 import SwiftUI
 import UIKit
@@ -20,48 +19,56 @@ struct VignettePieceDistante: View {
     private var estImage: Bool { piece.type.hasPrefix("image/") }
 
     var body: some View {
-        Group {
-            if estImage, let octets, let image = UIImage(data: octets) {
-                Image(uiImage: image)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-            } else if echec || !estImage {
-                tuileDocument
-            } else {
-                SqueletteVigie(hauteur: 64)
-            }
+        Button {
+            guard octets != nil || !estImage else { return }
+            visionneuse = true
+        } label: {
+            apercu
+                .frame(width: 64, height: 64)
+                .clipShape(RoundedRectangle(cornerRadius: Galbe.encart, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: Galbe.encart, style: .continuous)
+                        .strokeBorder(Teinte.filetAppuye, lineWidth: Trame.trait)
+                )
         }
-        .frame(width: 64, height: 64)
-        .clipShape(RoundedRectangle(cornerRadius: Rayon.boutonPetit, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: Rayon.boutonPetit, style: .continuous)
-                .strokeBorder(Couleurs.filet, lineWidth: Trait.filet)
-        )
-        .contentShape(.rect)
-        .onTapGesture { if octets != nil || !estImage { visionneuse = true } }
+        .buttonStyle(.allureCarte)
         .task { await charger() }
         .fullScreenCover(isPresented: $visionneuse) {
             VisionneusePieceEcran(piece: piece, octetsDejaCharges: octets)
         }
+        .accessibilityLabel("Pièce jointe \(piece.nom)")
+    }
+
+    @ViewBuilder private var apercu: some View {
+        if estImage, let octets, let image = UIImage(data: octets) {
+            Image(uiImage: image)
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+        } else if echec || !estImage {
+            tuileDocument
+        } else {
+            SilhouetteAttente(lignes: [0.8, 0.6])
+        }
     }
 
     private var tuileDocument: some View {
-        VStack(spacing: Espace.fin) {
+        VStack(spacing: Trame.fin) {
             Image(systemName: "doc.fill")
                 .font(.system(size: 16))
-                .foregroundStyle(Couleurs.texteTertiaire)
+                .foregroundStyle(Teinte.encreTernie)
             Text(piece.nom)
-                .monoMinuscule()
-                .foregroundStyle(Couleurs.texteTertiaire)
+                .donneeMinuscule()
+                .foregroundStyle(Teinte.encreTernie)
                 .lineLimit(2)
                 .multilineTextAlignment(.center)
         }
         .padding(4)
-        .background(Couleurs.fondCreuse)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Teinte.fondCreux)
     }
 
-    /// Ne charge les octets que pour une image : un PDF ou un texte n'a besoin
-    /// d'être récupéré qu'à l'ouverture de la visionneuse, pas pour la vignette.
+    /// Ne charge les octets que pour une image : un PDF n'a besoin d'être
+    /// récupéré qu'à l'ouverture de la visionneuse, pas pour la vignette.
     private func charger() async {
         guard estImage, octets == nil else { return }
         switch await client.octets(piece.url) {

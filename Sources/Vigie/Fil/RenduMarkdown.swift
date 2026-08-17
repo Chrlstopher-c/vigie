@@ -1,13 +1,12 @@
-// Le rendu markdown de Vigie, étage VUES. `AnalyseurMarkdown` (VigieNoyau, pur)
-// fait le travail difficile ; ce fichier ne fait que poser un `View` sur
-// chaque `BlocMarkdown`. Titres, paragraphes, citations et filets ici — listes,
-// tableaux et code dans leurs propres fichiers, chacun assez dense pour le
-// mériter.
+// Le rendu markdown de Vigie, étage VUES. `AnalyseurMarkdown` (VigieNoyau,
+// pur) fait le travail difficile ; ce fichier pose un `View` sur chaque
+// `BlocMarkdown`. Titres, paragraphes, citations et filets ici — listes,
+// tableaux et code dans leurs propres fichiers.
 #if canImport(SwiftUI)
 import SwiftUI
 import VigieNoyau
 
-/// Rend une source markdown complète. C'est LE composant qui manque à
+/// Rend une source markdown complète — le composant qui manque à
 /// `AttributedString(markdown:)` : titres, listes, tableaux, blocs de code.
 public struct RenduMarkdown: View {
     private let blocs: [BlocRange]
@@ -17,7 +16,7 @@ public struct RenduMarkdown: View {
     }
 
     public var body: some View {
-        VStack(alignment: .leading, spacing: Espace.standard) {
+        VStack(alignment: .leading, spacing: Trame.element) {
             ForEach(blocs) { entree in
                 vue(pour: entree.bloc)
             }
@@ -31,8 +30,9 @@ public struct RenduMarkdown: View {
             vueTitre(niveau: niveau, contenu: contenu)
         case .paragraphe(let contenu):
             texteFragments(contenu)
-                .corps()
-                .foregroundStyle(Couleurs.encre)
+                .phrase()
+                .foregroundStyle(Teinte.encre)
+                .lineSpacing(2.5)
                 .textSelection(.enabled)
         case .liste(let entrees):
             vueListe(entrees)
@@ -43,29 +43,31 @@ public struct RenduMarkdown: View {
         case .citation(let contenu):
             vueCitation(contenu)
         case .filet:
-            FiletHorizontal().padding(.vertical, Espace.fin)
+            FiletFin().padding(.vertical, Trame.fin)
         }
     }
 
+    /// Les titres d'un rendu de lead prennent la voix serif des titres de la
+    /// charte : c'est un DOCUMENT qu'on lit, pas un message.
     @ViewBuilder
     private func vueTitre(niveau: Int, contenu: [FragmentTexte]) -> some View {
-        let texte = texteFragments(contenu).foregroundStyle(Couleurs.encre)
+        let texte = texteFragments(contenu).foregroundStyle(Teinte.encre)
         switch niveau {
-        case 1: texte.titreModale()
-        case 2: texte.titreSection()
-        default: texte.corpsAccentue()
+        case 1: texte.font(.system(size: 21, weight: .semibold, design: .serif))
+        case 2: texte.font(.system(size: 18, weight: .semibold, design: .serif))
+        default: texte.phraseForte()
         }
     }
 
     private func vueCitation(_ contenu: [FragmentTexte]) -> some View {
-        HStack(alignment: .top, spacing: Espace.serre) {
-            Rectangle()
-                .fill(Couleurs.filetAppuye)
+        HStack(alignment: .top, spacing: Trame.serre) {
+            RoundedRectangle(cornerRadius: 1.5)
+                .fill(Teinte.accent.opacity(0.5))
                 .frame(width: 3)
             texteFragments(contenu)
-                .secondaire()
-                .foregroundStyle(Couleurs.texteSecondaire)
+                .note()
                 .italic()
+                .foregroundStyle(Teinte.encreDouce)
         }
     }
 }

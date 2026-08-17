@@ -1,11 +1,9 @@
-// Carte d'un mandat proposé, au fil de la conversation.
+// Carte d'un mandat au fil de la conversation.
 //
-// `☠` Le contenu de l'évènement n'est que l'IDENTIFIANT de la proposition —
-// voir `SegmentFil.mandat`. La carte se remplit en croisant avec le miroir des
-// propositions (`CleMiroir.propositions`, alimenté par le domaine Décisions) ;
-// sans correspondance, elle reste honnête plutôt que de rien montrer.
-// Trancher le mandat n'est PAS le rôle de cet écran : H-61 veut l'accès au
-// même rang que le titre, ce que fait déjà la carte de Décisions — on y renvoie.
+// `☠` Le contenu de l'évènement n'est que l'IDENTIFIANT de la proposition
+// (`SegmentFil.mandat`) : la carte se remplit en croisant le miroir des
+// propositions, et reste honnête sans correspondance. Trancher n'est PAS le
+// rôle de cet écran — la file vit au Quart, et son badge se voit d'ici.
 #if canImport(SwiftUI)
 import SwiftUI
 import VigieNoyau
@@ -16,52 +14,65 @@ struct VueMandatFil: View {
     let connue: PropositionApi?
 
     var body: some View {
-        NavigationLink(value: Domaine.decisions) {
-            CarteVigie(relief: .bordee(.accent)) {
-                VStack(alignment: .leading, spacing: Espace.fin) {
-                    HStack(spacing: Espace.serre) {
-                        Image(systemName: "hand.raised.fill")
-                            .font(.system(size: 11))
-                            .foregroundStyle(Couleurs.accentPrimaire)
-                        Text("Mandat proposé")
-                            .etiquette()
-                            .foregroundStyle(Couleurs.accentPrimaire)
-                        Spacer(minLength: 0)
-                        Text(heureFil(at))
-                            .monoMinuscule()
-                            .foregroundStyle(Couleurs.texteTertiaire)
-                    }
-                    contenu
-                }
+        Panneau(rail: rail) {
+            VStack(alignment: .leading, spacing: Trame.serre) {
+                entete
+                contenu
             }
         }
-        .buttonStyle(.plain)
-        .apparitionDouce()
+    }
+
+    private var entete: some View {
+        HStack(spacing: Trame.serre) {
+            Sceau("Mandat", ton: .attention)
+            statut
+            Spacer(minLength: 0)
+            Text(heureFil(at))
+                .donneeMinuscule()
+                .foregroundStyle(Teinte.encreTernie)
+        }
+    }
+
+    /// L'état de la proposition, tel que le dernier relevé le connaît : un
+    /// mandat déjà tranché ne doit pas continuer d'appeler au Quart.
+    @ViewBuilder private var statut: some View {
+        if let connue {
+            switch connue.statut {
+            case .approuvee: Sceau("autorisé", ton: .sain)
+            case .refusee: Sceau("refusé", ton: .neutre)
+            default: Sceau("à trancher au Quart", ton: .attention)
+            }
+        }
+    }
+
+    private var rail: Ton {
+        guard let connue else { return .attention }
+        return connue.statut == .enAttente ? .attention : .neutre
     }
 
     @ViewBuilder private var contenu: some View {
         if let connue {
-            Text(connue.projet).corpsAccentue().foregroundStyle(Couleurs.encre)
-            Text(connue.objectif).secondaire().foregroundStyle(Couleurs.texteSecondaire).lineLimit(2)
-            Text(LisiblePortee.portee(connue.acces))
-                .legende()
-                .foregroundStyle(Couleurs.texteTertiaire)
+            Text(connue.projet)
+                .phraseForte()
+                .foregroundStyle(Teinte.encre)
+            Text(connue.objectif)
+                .note()
+                .foregroundStyle(Teinte.encreDouce)
+                .lineLimit(3)
+            // H-61 : le droit réel, jamais replié — même règle qu'au Quart.
+            HStack(spacing: Trame.fin + 1) {
+                Image(systemName: connue.acces.ouvreLEcriture ? "pencil.circle.fill" : "eye.fill")
+                    .font(.system(size: 11, weight: .semibold))
+                Text(Lisible.portee(connue.acces))
+                    .mention()
+            }
+            .foregroundStyle(connue.acces.ouvreLEcriture ? Teinte.danger : Teinte.sain)
         } else {
-            Text("« \(identifiant) » — ouvre Décisions pour voir le détail et trancher.")
-                .secondaire()
-                .foregroundStyle(Couleurs.texteSecondaire)
+            Text("Proposition « \(identifiant) » — le détail arrive au prochain relevé, "
+                + "la file se tranche au Quart.")
+                .note()
+                .foregroundStyle(Teinte.encreDouce)
         }
-    }
-}
-
-/// Le droit accordé, en toutes lettres — même règle que le domaine Décisions
-/// (H-61), reformulée ici plutôt qu'importée : deux domaines ne partagent pas
-/// leurs internes, seulement le contrat qu'ils lisent tous les deux.
-private enum LisiblePortee {
-    static func portee(_ acces: AccesMandatApi) -> String {
-        acces.ouvreLEcriture
-            ? "Modifie les fichiers du projet et peut commiter."
-            : "Lit et rapporte. Ne modifie aucun fichier."
     }
 }
 #endif

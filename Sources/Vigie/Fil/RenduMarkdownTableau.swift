@@ -1,7 +1,6 @@
-// Rendu des tableaux markdown — le bloc qui justifie à lui seul l'analyseur
-// maison (voir `AnalyseurTableau`). `Grid` dimensionne les colonnes à leur
-// contenu ; le défilement horizontal absorbe un tableau plus large que l'écran
-// plutôt que de le tasser illisible.
+// Rendu des tableaux markdown — le bloc qui justifie l'analyseur maison.
+// `Grid` dimensionne les colonnes à leur contenu ; le défilement horizontal
+// absorbe un tableau plus large que l'écran plutôt que de le tasser illisible.
 #if canImport(SwiftUI)
 import SwiftUI
 import VigieNoyau
@@ -10,40 +9,45 @@ extension RenduMarkdown {
 
     func vueTableau(_ table: TableauMarkdown) -> some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            Grid(alignment: .topLeading, horizontalSpacing: Espace.carte, verticalSpacing: Espace.serre) {
+            Grid(alignment: .topLeading, horizontalSpacing: Trame.bloc, verticalSpacing: Trame.serre) {
                 GridRow {
                     ForEach(Array(table.entete.enumerated()), id: \.offset) { indice, contenu in
-                        celluleTableau(contenu, alignement: table.alignement(indice), entete: true)
+                        cellule(contenu, alignement: table.alignement(indice), entete: true)
                     }
                 }
-                Divider().gridCellColumns(table.colonnes)
+                FiletFin().gridCellColumns(table.colonnes)
                 ForEach(Array(table.lignes.enumerated()), id: \.offset) { _, ligne in
                     GridRow {
                         ForEach(Array(ligne.enumerated()), id: \.offset) { indice, contenu in
-                            celluleTableau(contenu, alignement: table.alignement(indice), entete: false)
+                            cellule(contenu, alignement: table.alignement(indice), entete: false)
                         }
                     }
                 }
             }
-            .padding(Espace.carte)
+            .padding(Trame.element)
         }
-        .background(Couleurs.surface, in: RoundedRectangle(cornerRadius: Rayon.encart, style: .continuous))
+        .background(
+            Teinte.fondCreux,
+            in: RoundedRectangle(cornerRadius: Galbe.encart, style: .continuous)
+        )
         .overlay(
-            RoundedRectangle(cornerRadius: Rayon.encart, style: .continuous)
-                .strokeBorder(Couleurs.filet, lineWidth: Trait.filet)
+            RoundedRectangle(cornerRadius: Galbe.encart, style: .continuous)
+                .strokeBorder(Teinte.filet, lineWidth: Trame.trait)
         )
     }
 
-    private func celluleTableau(
+    /// L'alignement déclaré est respecté : un tableau de mesures aligné à
+    /// droite se lit d'un coup d'œil, et c'est la forme des rendus de leads.
+    private func cellule(
         _ contenu: [FragmentTexte],
         alignement: AlignementColonne,
         entete: Bool
     ) -> some View {
         Group {
             if entete {
-                texteFragments(contenu).corpsAccentue().foregroundStyle(Couleurs.encre)
+                texteFragments(contenu).note().bold().foregroundStyle(Teinte.encre)
             } else {
-                texteFragments(contenu).secondaire().foregroundStyle(Couleurs.texteSecondaire)
+                texteFragments(contenu).note().foregroundStyle(Teinte.encreDouce)
             }
         }
         .frame(maxWidth: .infinity, alignment: alignementSwiftUI(alignement))

@@ -4,27 +4,27 @@ import PhotosUI
 import SwiftUI
 import VigieNoyau
 
-/// Un fil de l'orchestrateur : les tours segmentés, le bloc en cours de frappe,
-/// et le composeur.
+/// Un fil de l'orchestrateur : les tours segmentés, le bloc en cours de
+/// frappe, le composeur, et la feuille de tenue du fil (⋯).
 ///
-/// `☠` C'est le SEUL écran qui a le droit de battre à 400 ms, et seulement
-/// pendant une génération : c'est le seul régime où l'écran change assez vite
-/// pour qu'on le regarde. Au repos, il retombe à quatre secondes comme le reste.
-///
-/// `☠` Le curseur `depuis` n'est jamais remis à zéro tant que le fil est ouvert :
-/// re-demander le fil entier à chaque battement de 400 ms le ferait clignoter et
-/// rejetterait le défilement à chaque tour.
+/// `☠` Seul écran autorisé à battre à 400 ms, et seulement pendant une
+/// génération. Le curseur `depuis` n'est jamais remis à zéro tant que le fil
+/// est ouvert : re-demander l'historique entier à chaque battement le ferait
+/// clignoter et rejetterait le défilement.
 struct ConversationEcran: View {
     @Environment(\.clientPi) private var client
     @Environment(\.miroir) private var miroir
     @Environment(Cadence.self) private var cadence
+    @Environment(\.dismiss) private var congedier
 
     let identifiant: String
+    /// Peut arriver vide (ouverture par notification) : le miroir le retrouve.
     let titre: String
 
     @State private var evenements: [EvenementApi] = []
     @State private var propositions: [String: PropositionApi] = [:]
     @State private var detail: DetailFilApi?
+    @State private var filConnu: FilApi?
     @State private var partiel: PartielApi?
     @State private var curseur = 0
     @State private var generation = false
@@ -33,83 +33,121 @@ struct ConversationEcran: View {
     @State private var envoiEnCours = false
     @State private var refus: ErreurApi?
     @State private var releveA: Date?
+    @State private var choixMoteur = ChoixMoteur()
+    @State private var catalogue: [ModeleApi] = []
+    @State private var feuilleMoteur = false
+    @State private var feuilleReglages = false
+    @State private var colleBas = true
+    @State private var avis: String?
 
     private var cle: String { "fil.\(identifiant)" }
+    private static let ancreBas = "fil.bas"
 
     var body: some View {
         VStack(spacing: 0) {
-            EnteteDomaine(titre: titre, releveA: releveA)
             entete
+            if let detail { EnTeteFilMeta(detail: detail, machine: filConnu?.machine) }
             fil
-            Composeur(
-                texte: $brouillon,
-                pieces: pieces,
-                generation: generation,
-                envoiEnCours: envoiEnCours,
-                ajouterPieces: ajouter(_:),
-                retirerPiece: { identifiant in pieces.removeAll { $0.id == identifiant } },
-                envoyer: { Task { await envoyer() } },
-                interrompre: { Task { await interrompre() } }
-            )
+            composeur
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .background(Couleurs.fond)
+        .background(Teinte.fond)
         .task { await ouvrir() }
         .cadencePar(cle) { await battre() }
         .onChange(of: generation) { _, enCours in
             cadence.changerRegime(cle, enCours ? .generation : .repos)
         }
-    }
-
-    @ViewBuilder private var entete: some View {
-        if let detail {
-            EnTeteFilMeta(
-                modele: detail.model,
-                effort: detail.effort,
-                contextPct: detail.contextPct,
-                compactions: detail.compactions,
-                machine: nil,
-                plafondAutonomie: detail.plafondAutonomie
+        .avisFugace($avis)
+        .feuilleQuart(presentee: $feuilleMoteur, hauteurs: [.medium, .large]) {
+            ChoixMoteurFeuille(catalogue: catalogue, modeleDuFil: detail?.model, choix: $choixMoteur)
+        }
+        .feuilleQuart(presentee: $feuilleReglages) {
+            ReglagesFilFeuille(
+                identifiant: identifiant,
+                detail: detail,
+                filConnu: filConnu,
+                apres: { await battre() },
+                apresArchivage: { congedier() }
             )
         }
+    }
+
+    // MARK: - Composition
+
+    private var entete: some View {
+        EnTeteEcran(titreAffiche, releveA: releveA, retour: true) {
+            Button {
+                feuilleReglages = true
+            } label: {
+                Image(systemName: "ellipsis.circle")
+            }
+            .buttonStyle(.allureIcone)
+            .foregroundStyle(Teinte.encreDouce)
+            .accessibilityLabel("Tenue du fil")
+        }
+    }
+
+    private var titreAffiche: String {
+        if !titre.isEmpty { return titre }
+        return filConnu?.titre ?? detail?.titre ?? "Fil"
     }
 
     private var fil: some View {
         ScrollViewReader { defilement in
             ScrollView {
-                VStack(alignment: .leading, spacing: Espace.carte) {
+                VStack(alignment: .leading, spacing: Trame.bloc) {
                     if let refus, refus.genre != .transport {
-                        BandeauAlerte(refus.message, etat: .vigilance)
+                        BandeauNote(refus.message, ton: .vigilance)
                     }
-                    ForEach(Array(segments.enumerated()), id: \.element.id) { rang, segment in
-                        VueSegmentFil(
-                            segment: segment,
-                            propositionsConnues: propositions,
-                            rang: rang
-                        )
+                    ForEach(segments) { segment in
+                        VueSegmentFil(segment: segment, propositionsConnues: propositions)
                     }
                     if let partiel { BlocPartielVue(partiel: partiel) }
-                    // Ancre de défilement : le bas du fil, jamais un index de
-                    // ligne — les lignes changent, le bas ne bouge pas.
+                    // Ancre : le bas du fil, jamais un index de ligne — les
+                    // lignes changent, le bas ne bouge pas.
                     Color.clear.frame(height: 1).id(Self.ancreBas)
                 }
-                .padding(.horizontal, Espace.ecran)
-                .padding(.vertical, Espace.standard)
+                .padding(.horizontal, Trame.ecran)
+                .padding(.vertical, Trame.element)
             }
             .scrollIndicators(.hidden)
             .scrollDismissesKeyboard(.interactively)
-            .onChange(of: curseur) { _, _ in
-                withAnimation(Mouvement.changementEtat) {
-                    defilement.scrollTo(Self.ancreBas, anchor: .bottom)
-                }
+            .onScrollGeometryChange(for: CGFloat.self) { geometrie in
+                geometrie.contentSize.height - geometrie.contentOffset.y - geometrie.containerSize.height
+            } action: { _, distance in
+                colleBas = distance < 60
             }
+            .onChange(of: curseur) { _, _ in recoller(defilement) }
+            .onChange(of: partiel) { _, _ in recoller(defilement) }
         }
     }
 
-    private static let ancreBas = "fil.bas"
+    /// On ne recolle au bas que si Chris y était déjà : relire un vieux tour
+    /// pendant qu'un nouveau arrive ne doit jamais rejeter la lecture.
+    private func recoller(_ defilement: ScrollViewProxy) {
+        guard colleBas else { return }
+        withAnimation(Elan.pose) {
+            defilement.scrollTo(Self.ancreBas, anchor: .bottom)
+        }
+    }
 
     private var segments: [SegmentFil] {
         SegmentationFil.segmenter(evenements)
+    }
+
+    private var composeur: some View {
+        ComposeurFil(
+            texte: $brouillon,
+            choixMoteur: $choixMoteur,
+            pieces: pieces,
+            generation: generation,
+            envoiEnCours: envoiEnCours,
+            ouvrirMoteur: { feuilleMoteur = true },
+            ajouterPieces: ajouter(_:),
+            retirerPiece: { identifiant in pieces.removeAll { $0.id == identifiant } },
+            envoyer: { Task { await envoyer() } },
+            interrompre: { Task { await interrompre() } }
+        )
     }
 
     // MARK: - Relevés
@@ -119,12 +157,22 @@ struct ConversationEcran: View {
             appliquer(cache.valeur)
             releveA = cache.releveA
         }
+        if let cache = await miroir.lire([FilApi].self, .fils) {
+            filConnu = cache.valeur.first { $0.id == identifiant }
+        }
+        if let cache = await miroir.lire([ModeleApi].self, .modeles) {
+            catalogue = cache.valeur
+        }
         await lireLesPropositions()
+        if catalogue.isEmpty {
+            let lecture = await client.lire([ModeleApi].self, Route.modeles, memoriser: .modeles)
+            if let charge = lecture.charge { catalogue = charge }
+        }
     }
 
+    /// `☠` Le premier appel prend le fil entier ; les suivants n'en prennent
+    /// que la suite, par le curseur rendu par le serveur.
     @MainActor private func battre() async {
-        // `☠` Le premier appel prend le fil entier ; les suivants n'en prennent
-        // que la suite, par le curseur rendu par le serveur.
         if evenements.isEmpty {
             let lecture = await client.lire(
                 DetailFilApi.self, Route.fil(identifiant), memoriser: .fil(identifiant)
@@ -150,17 +198,18 @@ struct ConversationEcran: View {
     }
 
     private func appliquerSuite(_ charge: EvenementsFilApi) {
-        // Le serveur ne rend que ce qui suit le curseur : on ajoute, on ne
-        // remplace pas — et on se garde d'un doublon si un tour se recroise.
-        let connus = Set(evenements.map(\.seq))
-        evenements.append(contentsOf: charge.events.filter { !connus.contains($0.seq) })
+        // `☠` Un appel d'outil revient avec le MÊME `seq` une fois son
+        // résultat arrivé : il se met à jour EN PLACE, il ne se reposte pas.
+        var parSeq = Dictionary(evenements.map { ($0.seq, $0) }, uniquingKeysWith: { _, d in d })
+        for evenement in charge.events { parSeq[evenement.seq] = evenement }
+        evenements = parSeq.values.sorted { $0.seq < $1.seq }
         curseur = charge.cursor
         generation = charge.generating
         partiel = charge.partial
     }
 
-    /// Un évènement `mandat` ne porte que l'IDENTIFIANT de la proposition : la
-    /// carte se remplit en croisant avec la liste des propositions.
+    /// Un évènement `mandat` ne porte que l'IDENTIFIANT de la proposition :
+    /// la carte se remplit en croisant avec la liste des propositions.
     private func lireLesPropositions() async {
         let lecture = await client.lire(
             [PropositionApi].self, Route.propositions, memoriser: .propositions
@@ -172,8 +221,8 @@ struct ConversationEcran: View {
     // MARK: - Écritures
 
     private func ajouter(_ choisies: [PhotosPickerItem]) async {
-        for item in choisies {
-            guard let piece = await PieceEnAttente.depuis(item) else { continue }
+        for element in choisies {
+            guard let piece = await PieceEnAttente.depuis(element) else { continue }
             pieces.append(piece)
         }
     }
@@ -183,26 +232,33 @@ struct ConversationEcran: View {
         guard !texte.isEmpty || !pieces.isEmpty, !envoiEnCours else { return }
         envoiEnCours = true
         defer { envoiEnCours = false }
-        // `☠` Le champ est `text`, et un texte VIDE est valide dès qu'il y a une
-        // pièce : coller une capture sans écrire un mot est le geste normal.
+        // `☠` Le champ est `text`, et un texte VIDE est valide dès qu'il y a
+        // une pièce : coller une capture sans un mot est le geste normal.
         var champs: [String: ValeurJSON] = ["text": .texte(texte)]
         if !pieces.isEmpty { champs["pieces"] = .liste(pieces.map(\.charge)) }
-        let corps = CorpsJSON(champs)
-        switch await client.ecrire(Route.messageFil(identifiant), corps) {
+        choixMoteur.verser(dans: &champs)
+        switch await client.ecrire(Route.messageFil(identifiant), CorpsJSON(champs)) {
         case .success:
             brouillon = ""
             pieces = []
+            colleBas = true
             await battre()
         case .failure(let erreur):
+            // Le refus des pièces jointes nomme les types et plafonds acceptés
+            // — mot pour mot, en place.
             refus = erreur
         }
     }
 
-    /// `☠` `interrupted: false` n'est PAS une erreur : le fil ne générait rien.
+    /// `☠` `interrupted: false` n'est PAS une erreur : le fil ne générait
+    /// rien. L'effet du serveur le dit — on l'affiche tel quel.
     private func interrompre() async {
         switch await client.ecrire(Route.interrompreFil(identifiant)) {
-        case .success: await battre()
-        case .failure(let erreur): refus = erreur
+        case .success(let accuse):
+            avis = accuse.effet
+            await battre()
+        case .failure(let erreur):
+            refus = erreur
         }
     }
 }

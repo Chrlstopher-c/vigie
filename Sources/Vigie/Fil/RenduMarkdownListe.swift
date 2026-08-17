@@ -7,7 +7,7 @@ import VigieNoyau
 extension RenduMarkdown {
 
     func vueListe(_ entrees: [EntreeListe]) -> some View {
-        VStack(alignment: .leading, spacing: Espace.serre) {
+        VStack(alignment: .leading, spacing: Trame.serre) {
             ForEach(Array(entrees.enumerated()), id: \.offset) { _, entree in
                 vueEntree(entree)
             }
@@ -15,13 +15,13 @@ extension RenduMarkdown {
     }
 
     private func vueEntree(_ entree: EntreeListe) -> some View {
-        HStack(alignment: .top, spacing: Espace.serre) {
+        HStack(alignment: .top, spacing: Trame.serre) {
             marqueur(entree)
             texteFragments(entree.contenu)
-                .corps()
-                .foregroundStyle(Couleurs.encre)
+                .phrase()
+                .foregroundStyle(Teinte.encre)
                 .strikethrough(entree.cochee == true)
-                .opacity(entree.cochee == true ? 0.6 : 1)
+                .opacity(entree.cochee == true ? 0.55 : 1)
         }
         .padding(.leading, CGFloat(entree.niveau) * 16)
     }
@@ -31,14 +31,15 @@ extension RenduMarkdown {
         if let cochee = entree.cochee {
             Image(systemName: cochee ? "checkmark.square.fill" : "square")
                 .font(.system(size: 12))
-                .foregroundStyle(cochee ? Couleurs.etatSain : Couleurs.texteTertiaire)
+                .foregroundStyle(cochee ? Teinte.sain : Teinte.encreTernie)
                 .frame(width: 16, alignment: .center)
                 .padding(.top, 2)
         } else {
             Text(entree.puce)
-                .monoPetit()
-                .foregroundStyle(Couleurs.texteSecondaire)
+                .donneePetite()
+                .foregroundStyle(Teinte.accent.opacity(0.8))
                 .frame(minWidth: 16, alignment: .trailing)
+                .padding(.top, 1)
         }
     }
 }

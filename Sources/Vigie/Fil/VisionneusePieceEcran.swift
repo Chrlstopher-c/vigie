@@ -1,5 +1,5 @@
 // Visionneuse plein écran d'une pièce jointe : image zoomable, texte, PDF, ou
-// repli honnête pour ce qu'on ne sait pas prévisualiser sur le téléphone.
+// repli honnête pour ce qui ne se prévisualise pas sur téléphone.
 #if canImport(SwiftUI)
 import PDFKit
 import SwiftUI
@@ -17,7 +17,7 @@ struct VisionneusePieceEcran: View {
 
     var body: some View {
         ZStack {
-            Couleurs.encre.ignoresSafeArea()
+            Teinte.terminalFond.ignoresSafeArea()
             contenu
             barre
         }
@@ -28,9 +28,14 @@ struct VisionneusePieceEcran: View {
         if let octets {
             vueSelonType(octets)
         } else if let refus {
-            EtatVide(symbole: "exclamationmark.triangle", titre: "Pièce indisponible", explication: refus.message)
+            EtatCalme(
+                symbole: "exclamationmark.triangle.fill",
+                titre: "Pièce indisponible",
+                explication: refus.message,
+                ton: .vigilance
+            )
         } else {
-            ProgressView().tint(Couleurs.texteSurSombre)
+            SouffleActivite(teinte: Teinte.terminalTexte)
         }
     }
 
@@ -42,14 +47,17 @@ struct VisionneusePieceEcran: View {
         } else if piece.type.hasPrefix("text/") || piece.type == "application/json" {
             ScrollView {
                 Text(String(decoding: octets, as: UTF8.self))
-                    .terminal()
-                    .padding(Espace.ecran)
+                    .texteTerminal()
+                    .foregroundStyle(Teinte.terminalTexte)
+                    .textSelection(.enabled)
+                    .padding(Trame.ecran)
             }
         } else {
-            EtatVide(
-                symbole: "doc",
+            EtatCalme(
+                symbole: "doc.fill",
                 titre: piece.nom,
-                explication: "Ce type de fichier ne se prévisualise pas sur le téléphone."
+                explication: "Ce type de fichier ne se prévisualise pas sur le téléphone.",
+                ton: .neutre
             )
         }
     }
@@ -58,23 +66,30 @@ struct VisionneusePieceEcran: View {
         VStack {
             HStack {
                 Spacer()
-                Button { fermer() } label: {
+                Button {
+                    fermer()
+                } label: {
                     Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 26))
-                        .foregroundStyle(Couleurs.texteSurSombre.opacity(0.85))
+                        .font(.system(size: 28))
+                        .foregroundStyle(Teinte.terminalTexte.opacity(0.85))
                 }
+                .buttonStyle(.allureIcone)
+                .accessibilityLabel("Fermer")
             }
-            .padding(Espace.ecran)
+            .padding(Trame.element)
             Spacer()
             Text(piece.nom)
-                .secondaire()
-                .foregroundStyle(Couleurs.texteSurSombre.opacity(0.85))
-                .padding(.bottom, Espace.section)
+                .note()
+                .foregroundStyle(Teinte.terminalTexte.opacity(0.85))
+                .padding(.bottom, Trame.section)
         }
     }
 
     private func charger() async {
-        if let octetsDejaCharges { octets = octetsDejaCharges; return }
+        if let octetsDejaCharges {
+            octets = octetsDejaCharges
+            return
+        }
         switch await client.octets(piece.url) {
         case .success(let donnees): octets = donnees
         case .failure(let erreur): refus = erreur
@@ -82,7 +97,7 @@ struct VisionneusePieceEcran: View {
     }
 }
 
-/// Image au doigt : pincer pour zoomer, double-tap pour revenir.
+/// Image au doigt : pincer pour zoomer, double-toucher pour revenir.
 private struct VueImageZoomable: View {
     let image: UIImage
     @State private var echelle: CGFloat = 1
@@ -95,9 +110,11 @@ private struct VueImageZoomable: View {
             .gesture(
                 MagnificationGesture()
                     .onChanged { valeur in echelle = valeur }
-                    .onEnded { _ in withAnimation(Ressort.direct) { echelle = max(1, min(echelle, 4)) } }
+                    .onEnded { _ in
+                        withAnimation(Elan.vif) { echelle = max(1, min(echelle, 4)) }
+                    }
             )
-            .onTapGesture(count: 2) { withAnimation(Ressort.direct) { echelle = 1 } }
+            .onTapGesture(count: 2) { withAnimation(Elan.vif) { echelle = 1 } }
     }
 }
 

@@ -1,11 +1,9 @@
 // Étage inline du rendu markdown : `[FragmentTexte]` → `Text`.
 //
-// Choix assumé (voir la consigne de `AnalyseurMarkdown`) : chaque fragment
-// devient un `AttributedString` porteur d'un `InlinePresentationIntent`
-// (gras/italique/code/barré) plutôt qu'un `Font` fixé en dur. `Text` sait
-// rendre ces intentions sans qu'on lui impose une taille — le fragment
-// HÉRITE donc du style posé par le conteneur (`.corps()`, `.titreSection()`,
-// …), exactement comme le ferait `AttributedString(markdown:)`.
+// Chaque fragment devient un `AttributedString` porteur d'un
+// `InlinePresentationIntent` (gras/italique/code/barré) plutôt qu'un `Font`
+// fixé : le fragment HÉRITE du style posé par le conteneur, exactement comme
+// le ferait `AttributedString(markdown:)`.
 #if canImport(SwiftUI)
 import SwiftUI
 import VigieNoyau
@@ -18,6 +16,9 @@ func texteFragments(_ fragments: [FragmentTexte]) -> Text {
 }
 
 extension FragmentTexte {
+    /// `☠` Le code inline se rend SANS fond ni bordure (relevé prod) :
+    /// encadrer chaque terme technique fabrique des pavés qui hachent la
+    /// ligne. Seule la police change — c'est l'intention `.code`.
     fileprivate var attribue: AttributedString {
         var chaine = AttributedString(texte)
         var intention: InlinePresentationIntent = []
@@ -28,7 +29,7 @@ extension FragmentTexte {
         if !intention.isEmpty { chaine.inlinePresentationIntent = intention }
         if let lien, let cible = URL(string: lien) {
             chaine.link = cible
-            chaine.foregroundColor = Couleurs.accentAppuye
+            chaine.foregroundColor = Teinte.accent
             chaine.underlineStyle = .single
         }
         return chaine
