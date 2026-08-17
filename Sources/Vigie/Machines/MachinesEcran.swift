@@ -5,11 +5,9 @@ import VigieNoyau
 
 /// Le parc matériel : machines de travail, quotas Claude, poste de travail.
 ///
-/// `☠` Les métriques ne battent PAS avec la minuterie. `/machines/metriques`
-/// fait un aller-retour par machine, jusqu'à Cloudflare pour le VPS : la
-/// webapp les sondait toutes les trois secondes, ce qui vide une batterie de
-/// téléphone pour un chiffre regardé quelques secondes. Ici, à l'ouverture si
-/// le relevé est périmé, et sur geste.
+/// `☠` Les métriques ne battent PAS avec la minuterie : un aller-retour PAR
+/// machine, jusqu'à Cloudflare pour le VPS. À l'ouverture si le relevé est
+/// périmé, et sur geste — jamais en boucle.
 public struct MachinesEcran: View {
     @Environment(\.clientPi) private var client
     @Environment(\.miroir) private var miroir
@@ -20,27 +18,32 @@ public struct MachinesEcran: View {
 
     public var body: some View {
         VStack(spacing: 0) {
-            EnteteDomaine(.machines, releveA: releve.parcReleveA) {
-                Button {
-                    Task { await releve.releverMetriques(client: client) }
-                } label: {
-                    Image(systemName: "gauge.medium")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(Couleurs.encre)
-                }
-                .disabled(releve.metriquesEnCours)
-            }
+            entete
             corps
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .background(Couleurs.fond)
+        .background(Teinte.fond)
         .task { await ouvrir() }
         .cadencePar("machines") { await releve.relever(client: client) }
     }
 
+    private var entete: some View {
+        EnTeteEcran("Machines", releveA: releve.parcReleveA) {
+            Button {
+                Task { await releve.releverMetriques(client: client) }
+            } label: {
+                Image(systemName: "gauge")
+            }
+            .buttonStyle(.allureIcone)
+            .foregroundStyle(releve.metriquesEnCours ? Teinte.encreTernie : Teinte.encreDouce)
+            .disabled(releve.metriquesEnCours)
+            .accessibilityLabel("Relever les métriques")
+        }
+    }
+
     private var corps: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: Espace.section) {
+            VStack(alignment: .leading, spacing: Trame.section) {
                 avertissements
                 if releve.premierRemplissage {
                     attente
@@ -50,8 +53,8 @@ public struct MachinesEcran: View {
                     SectionPoste(releve: releve)
                 }
             }
-            .padding(.horizontal, Espace.ecran)
-            .padding(.vertical, Espace.standard)
+            .padding(.horizontal, Trame.ecran)
+            .padding(.bottom, Trame.section)
         }
         .scrollIndicators(.hidden)
         .refreshable { await releve.relever(client: client, forcerMetriques: true) }
@@ -59,71 +62,76 @@ public struct MachinesEcran: View {
 
     @ViewBuilder private var avertissements: some View {
         if let echec = releve.dernierEchec {
-            BandeauAlerte(echec, etat: .danger)
+            BandeauNote(echec, ton: .danger)
         } else if let mention = releve.mentionDatee {
             // Un PC absent n'est pas une panne : la donnée est vraie, datée.
-            BandeauAlerte(mention, etat: .vigilance)
+            BandeauNote(mention, ton: .veille)
         }
     }
 
     // MARK: - Machines
 
     private var sectionMachines: some View {
-        SectionVigie("Machines") {
-            VStack(spacing: Espace.standard) {
-                ForEach(Array(releve.machines.enumerated()), id: \.element.id) { rang, machine in
-                    CarteMachine(
-                        machine: machine,
-                        metriques: releve.metriquesDe(machine.id),
-                        equipes: releve.equipesDe(machine.id).count
-                    )
-                    .apparitionDouce(rang: rang)
+        VStack(alignment: .leading, spacing: Trame.element) {
+            TeteDeSection("Machines") {
+                HStack(spacing: Trame.serre) {
+                    Text(releve.mentionParc)
+                        .donneeMinuscule()
+                        .foregroundStyle(Teinte.encreTernie)
+                    if let mesure = releve.metriquesReleveA {
+                        Text("· mesures")
+                            .donneeMinuscule()
+                            .foregroundStyle(Teinte.encreTernie)
+                        MentionFraicheur(mesure)
+                    }
                 }
             }
-        } accessoire: {
-            Text(releve.mentionParc)
-                .monoMinuscule()
-                .foregroundStyle(Couleurs.texteTertiaire)
+            ForEach(Array(releve.machines.enumerated()), id: \.element.id) { rang, machine in
+                CarteMachine(
+                    machine: machine,
+                    metriques: releve.metriquesDe(machine.id),
+                    equipes: releve.equipesDe(machine.id).count
+                )
+                .entreeEnScene(rang: rang)
+            }
         }
     }
 
     // MARK: - Quotas
 
     private var sectionQuotas: some View {
-        SectionVigie("Comptes Claude") {
-            CarteVigie {
-                VStack(spacing: 0) {
-                    ForEach(Array(releve.comptes.enumerated()), id: \.element.id) { rang, compte in
-                        LigneCompte(compte: compte, derniere: rang == releve.comptes.count - 1)
-                    }
-                    if releve.comptes.isEmpty {
-                        Text("Aucun compte connu du harness.")
-                            .legende()
-                            .foregroundStyle(Couleurs.texteTertiaire)
-                    }
+        VStack(alignment: .leading, spacing: Trame.element) {
+            TeteDeSection("Comptes Claude") {
+                Sceau(mentionQuotas, ton: releve.synthese.parcSature ? .danger : .neutre)
+            }
+            if releve.comptes.isEmpty {
+                Text("Aucun compte connu du harness.")
+                    .mention()
+                    .foregroundStyle(Teinte.encreTernie)
+            } else {
+                ForEach(Array(releve.comptes.enumerated()), id: \.element.id) { rang, compte in
+                    CarteCompte(
+                        compte: compte,
+                        equipes: releve.equipesParCompte[compte.id]?.count ?? 0
+                    )
+                    .entreeEnScene(rang: rang)
                 }
             }
-        } accessoire: {
-            PastilleEtat(mentionQuotas, etat: releve.synthese.parcSature ? .danger : .neutre)
         }
     }
 
     private var mentionQuotas: String {
         let synthese = releve.synthese
         guard !synthese.aucunCompte else { return "aucun" }
+        guard synthese.satures > 0 else { return "\(synthese.total) disponibles" }
         return "\(synthese.satures)/\(synthese.total) saturés"
     }
 
     private var attente: some View {
-        VStack(spacing: Espace.standard) {
+        VStack(spacing: Trame.element) {
             ForEach(0..<3, id: \.self) { rang in
-                CarteVigie {
-                    VStack(alignment: .leading, spacing: Espace.standard) {
-                        SqueletteVigie(hauteur: 13)
-                        SqueletteVigie(hauteur: 11)
-                    }
-                }
-                .apparitionDouce(rang: rang)
+                Panneau { SilhouetteAttente(lignes: [0.4, 0.8]) }
+                    .entreeEnScene(rang: rang)
             }
         }
     }
