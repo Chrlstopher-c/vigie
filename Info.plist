@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Fusionné avec les clés générées par xtool (Planner.swift : merge, la
+	     nôtre l'emporte). Aucune de ces clés n'est un entitlement : elles ne
+	     sont donc pas soumises à la signature Apple et fonctionnent en free
+	     provisioning. -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<!-- Exécution continue tant qu'une session audio joue : seul moyen de
+		     garder un socket ouvert en arrière-plan sans compte payant. -->
+		<string>audio</string>
+		<!-- Seconde stratégie de maintien en vie, à comparer sur l'énergie. -->
+		<string>location</string>
+		<!-- Réveils opportunistes, pour rattraper ce qui a été manqué. -->
+		<string>fetch</string>
+		<string>processing</string>
+	</array>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Comparer le coût énergétique du maintien en vie par localisation avec celui de la session audio. Aucune position n'est enregistrée ni transmise.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Le maintien en vie par localisation exige l'autorisation « Toujours ». Précision réglée à trois kilomètres : le GPS n'est jamais sollicité, et aucune position n'est enregistrée ni transmise.</string>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>com.echo.labs.refresh</string>
+		<string>com.echo.labs.catchup</string>
+	</array>
+</dict>
+</plist>
