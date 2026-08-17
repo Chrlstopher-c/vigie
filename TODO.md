@@ -112,10 +112,15 @@ mandat.
 - [ ] Provoquer un vrai mandat sur le Pi, app fermée, et vérifier que l'alerte
       arrive. C'est la seule preuve qui compte : tout le reste de Vigie peut
       marcher, si celle-ci ne part pas le produit ne sert à rien.
-- [ ] Reprendre les trois autres circuits un par un : rallonge, arbitrage
-      d'inspection, notification du harness. Ils passent par le même sondage
-      (`CentreAlerte.sonder`) mais pas par les mêmes routes ni les mêmes
-      catégories.
+- [ ] Reprendre les autres circuits un par un : rallonge, `equipe_terminee`,
+      `equipe_echouee`. Ils passent par le même sondage (`CentreAlerte.sonder`)
+      mais pas par les mêmes routes ni les mêmes catégories.
+- [ ] **L'arbitrage d'inspection ne sonne PAS** — constaté en relisant
+      `CentreAlerte.sonder`, qui ne couvre que faits / mandats / rallonges. Une
+      inspection qui attend un verdict humain est pourtant une décision
+      bloquante, au même titre qu'un mandat : elle apparaît dans la file du
+      Quart mais ne réveille personne. À brancher (`missions` →
+      `inspection.attendArbitrage`, comme le fait déjà `DecisionsEcran`).
 - [ ] Vérifier la **déduplication** sur la durée : une même proposition sondée
       par le canal audio, puis par le rattrapage d'ouverture, puis par un réveil
       de fond ne doit sonner qu'une fois.
