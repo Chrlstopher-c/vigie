@@ -44,7 +44,7 @@ public struct FilEcran: View {
                         NavigationLink(value: RouteFil.conversation(fil.id, fil.titre)) {
                             CarteFil(fil: fil)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.vigieCarte)
                         .apparitionDouce(rang: rang)
                     }
                 }
@@ -124,7 +124,6 @@ private struct CarteFil: View {
                 }
             }
         }
-        .reagitAuToucher()
     }
 }
 #endif

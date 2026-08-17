@@ -29,7 +29,6 @@ struct CarteDeQuart: View {
             }
         }
         .apparitionDouce(rang: rang)
-        .reagitAuToucher()
     }
 
     private var entete: some View {

@@ -105,7 +105,7 @@ public struct QuartEcran: View {
                     NavigationLink(value: Domaine.decisions) {
                         CarteDeQuart(point: point, rang: rang)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.vigieCarte)
                 }
             }
         } else if premierReleve {

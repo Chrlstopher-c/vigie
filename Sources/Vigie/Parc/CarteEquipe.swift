@@ -26,7 +26,6 @@ struct CarteEquipe: View {
                 }
             }
         }
-        .reagitAuToucher()
     }
 
     private var entete: some View {

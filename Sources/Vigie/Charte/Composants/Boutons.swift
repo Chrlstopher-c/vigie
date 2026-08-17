@@ -75,6 +75,26 @@ public struct BoutonDestructif: ButtonStyle {
     }
 }
 
+/// Le style d'une CARTE cliquable : le contenu garde son propre habillage, seul
+/// l'appui est rendu.
+///
+/// `☠` Il existe parce que `reagitAuToucher()` posé sur un `NavigationLink`
+/// avale le toucher — son `onLongPressGesture` gagne la course contre le geste
+/// du lien, et l'écran devient muet sans qu'aucune erreur ne le dise. Ici le
+/// retour vient de `configuration.isPressed` : aucun geste concurrent.
+public struct BoutonCarte: ButtonStyle {
+    public func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.97 : 1)
+            .animation(Ressort.direct, value: configuration.isPressed)
+            .sensoryFeedback(Retour.contact, trigger: configuration.isPressed) { _, presse in presse }
+    }
+}
+
+extension ButtonStyle where Self == BoutonCarte {
+    public static var vigieCarte: BoutonCarte { BoutonCarte() }
+}
+
 extension ButtonStyle where Self == BoutonPrimaire {
     public static var vigiePrimaire: BoutonPrimaire { BoutonPrimaire() }
 }

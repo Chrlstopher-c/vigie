@@ -75,8 +75,17 @@ public extension View {
         }
     }
 
-    /// Rétrécissement au contact, avec ressort au relâchement. À poser sur tout
-    /// ce qui se touche et qui n'est pas déjà un bouton stylé.
+    /// Rétrécissement au contact, avec ressort au relâchement.
+    ///
+    /// `☠` **JAMAIS sur un `Button` ni sur un `NavigationLink`.** Il pose un
+    /// `onLongPressGesture`, qui gagne la course contre le geste interne du
+    /// bouton : le toucher est avalé, l'action ne part pas, et rien ne le
+    /// signale — l'écran a juste l'air mort. Pour une carte cliquable, c'est
+    /// `.buttonStyle(.vigieCarte)` qu'il faut, dont le retour vient de
+    /// `configuration.isPressed` et non d'un geste concurrent.
+    ///
+    /// Réservé, donc, à ce qui se touche SANS être interactif : une vignette
+    /// décorative, un bloc qui n'ouvre rien.
     func reagitAuToucher(echelle: CGFloat = 0.97) -> some View {
         modifier(ReagitAuToucher(echelle: echelle))
     }

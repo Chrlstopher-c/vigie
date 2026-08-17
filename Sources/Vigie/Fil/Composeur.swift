@@ -80,14 +80,12 @@ struct Composeur: View {
                     .frame(width: 40, height: 40)
             }
             .buttonStyle(.vigieDestructif)
-            .reagitAuToucher()
         } else {
             Button(action: envoyer) {
                 Image(systemName: "arrow.up").font(.system(size: 15, weight: .semibold))
                     .frame(width: 40, height: 40)
             }
             .buttonStyle(.vigieAccent)
-            .reagitAuToucher()
             .disabled(videDeContenu || envoiEnCours)
             .opacity(videDeContenu ? 0.5 : 1)
         }

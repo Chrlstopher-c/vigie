@@ -152,7 +152,7 @@ private struct SectionGroupeParc: View {
                     NavigationLink(value: RouteParc.equipe(mission.id)) {
                         CarteEquipe(mission: mission)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.vigieCarte)
                     .apparitionDouce(rang: rang)
                 }
             }
