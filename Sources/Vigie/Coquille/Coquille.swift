@@ -94,6 +94,7 @@ public struct Coquille: View {
 
     @State private var domaine: Domaine = .quart
     @State private var amorce = false
+    @State private var action = ActionRecue.partage
 
     public init() {}
 
@@ -107,6 +108,7 @@ public struct Coquille: View {
         .preferredColorScheme(.light)
         .task { await amorcer() }
         .onChange(of: phaseScene) { _, phase in reagirALaScene(phase) }
+        .onChange(of: action.ouverture) { _, demande in suivre(demande) }
         .fullScreenCover(isPresented: sessionAOuvrir) { EcranConnexion() }
     }
 
@@ -143,8 +145,23 @@ public struct Coquille: View {
         amorce = true
     }
 
+    /// Une notification touchée amène sur son domaine. `alerte` n'étant pas dans
+    /// la barre, on retombe sur les Réglages, d'où il est accessible.
+    private func suivre(_ demande: OuvertureDemandee?) {
+        guard let demande else { return }
+        withAnimation(Mouvement.changementEtat) {
+            domaine = Domaine.barre.contains(demande.domaine) ? demande.domaine : .reglages
+        }
+        action.ouverture = nil
+    }
+
     private func reagirALaScene(_ phase: ScenePhase) {
         cadence.scene(phase)
+        // Le rattrapage d'ouverture : le canal 2, déterministe, celui qui rend
+        // compte de tout ce qui s'est passé pendant que Vigie ne tournait pas.
+        if phase == .active, amorce {
+            Task { await CentreAlerte.partage.sonder(origine: .ouverture) }
+        }
         guard phase != .active else { return }
         // Dernier instant garanti avant une mise à mort : le miroir doit être
         // sur le disque, pas dans un regroupement d'écriture en attente.

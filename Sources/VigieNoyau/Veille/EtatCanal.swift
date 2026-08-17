@@ -63,6 +63,11 @@ public struct EtatCanal: Codable, Sendable, Equatable {
     public var expirationSignature: Date?
     /// Des faits ont quitté la fenêtre serveur sans avoir été vus.
     public var rattrapageIncomplet: Bool
+    /// Le motif du dernier échec de relevé, ou `nil` si le dernier tour a abouti.
+    /// `☠` Un tour raté ne doit PAS repousser l'alarme de silence : sans ce
+    /// champ, une panne de tunnel réarmerait les alarmes à chaque tentative et
+    /// l'alarme ne sonnerait jamais, alors même que plus rien n'est su.
+    public var derniereErreurTransport: String?
     public var faitsSonnes: Int
     /// Les vingt dernières alertes réellement posées, du plus récent au plus ancien.
     public var derniers: [EchoAlerte]

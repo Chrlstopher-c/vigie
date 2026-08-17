@@ -121,7 +121,9 @@ struct MachinesTests {
 
     @Test("les capacités passent en gigaoctets, virgule française")
     func capacites() {
-        #expect(FormatMachine.memoire(utiliseeMo: 12_800, totaleMo: 32_000) == "12,5 / 31,3 Go")
+        // 31,25 tombe pile entre deux décimales : `%.1f` arrondit au pair (IEEE),
+        // donc « 31,2 » — même valeur sur l'appareil que sur Arch.
+        #expect(FormatMachine.memoire(utiliseeMo: 12_800, totaleMo: 32_000) == "12,5 / 31,2 Go")
         #expect(FormatMachine.memoire(utiliseeMo: nil, totaleMo: 32_000) == "—")
         #expect(FormatMachine.memoire(utiliseeMo: 12_800, totaleMo: 0) == "—")
         #expect(FormatMachine.disque(utiliseGo: 411.6, totalGo: 916.2) == "412 / 916 Go")

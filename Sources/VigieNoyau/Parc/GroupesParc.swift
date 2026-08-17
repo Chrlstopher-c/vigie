@@ -36,6 +36,12 @@ public struct GroupeParc: Sendable, Identifiable, Hashable {
     public let id: String
     public let titre: String
     public let missions: [MissionApi]
+
+    public init(id: String, titre: String, missions: [MissionApi]) {
+        self.id = id
+        self.titre = titre
+        self.missions = missions
+    }
 }
 
 /// Un compteur de la rangée de tête.

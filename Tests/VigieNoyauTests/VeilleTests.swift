@@ -24,7 +24,9 @@ struct AlarmeSilenceTests {
         )
         #expect(projets.count == 2)
         #expect(projets.first?.identifiant == AlarmeSilence.identifiant(1))
-        #expect(projets.first?.delai == 7 * 3600)
+        // TimeInterval explicite : face à un optionnel, un littéral entier nu
+        // fait basculer la comparaison sur AnyHashable, qui rend toujours faux.
+        #expect(projets.first?.delai == TimeInterval(7 * 3600))
     }
 
     @Test("plus rien à armer au-delà de la dernière échéance")
@@ -199,7 +201,7 @@ struct ExpirationSignatureTests {
         let expiration = Date(timeIntervalSince1970: 1_700_000_000)
         let maintenant = expiration.addingTimeInterval(-4 * 86_400)
         let projet = try #require(ExpirationSignature.projet(expiration: expiration, maintenant: maintenant))
-        #expect(projet.delai == 3 * 86_400)
+        #expect(projet.delai == TimeInterval(3 * 86_400))
         #expect(projet.genre == .signature)
     }
 

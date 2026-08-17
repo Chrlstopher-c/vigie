@@ -14,6 +14,23 @@ import VigieNoyau
 /// On extrait donc la valeur du `Set-Cookie`, on la range ici, et `ClientPi`
 /// pose lui-même l'en-tête `Cookie:`. Le serveur ne vérifie qu'une égalité de
 /// détail du modèle d'authentification retiré de l'historique.
+/// Par où une valeur est réellement passée. Le repli fichier n'est pas un
+/// équivalent du trousseau : il ne survit pas à une désinstallation et vit dans
+/// le conteneur, dont l'UUID change à chaque pose d'IPA.
+public enum VoieJeton: Sendable {
+    case trousseau
+    case repliFichier
+    case echec
+
+    public var libelle: String {
+        switch self {
+        case .trousseau: return "trousseau — aller-retour réussi"
+        case .repliFichier: return "repli fichier (trousseau refusé)"
+        case .echec: return "aucune voie — la session ne survivra pas"
+        }
+    }
+}
+
 public struct CoffreJeton: Sendable {
     private let service: String
     private let compte: String
@@ -24,9 +41,14 @@ public struct CoffreJeton: Sendable {
         self.service = service
         self.compte = compte
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)
+        // `☠` Le nom du repli DOIT dépendre du compte : un second coffre (la
+        // sonde de diagnostic, par exemple) écraserait sinon le jeton de session
+        // dans le cas même où le repli sert — trousseau refusé.
+        let empreinte = "\(service).\(compte)"
+            .replacingOccurrences(of: "/", with: "-")
         repli = (base.first ?? URL(fileURLWithPath: NSTemporaryDirectory()))
             .appendingPathComponent("Vigie", isDirectory: true)
-            .appendingPathComponent("jeton.bin")
+            .appendingPathComponent("\(empreinte).bin")
     }
 
     // MARK: - Trousseau
@@ -44,34 +66,14 @@ public struct CoffreJeton: Sendable {
         effacerDuTrousseau()
         // `[String: Any]` est imposé par l'API Security, qui ne prend qu'un
         // CFDictionary hétérogène. C'est la seule frontière non typée du projet.
-        let requete: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: compte,
-            kSecValueData as String: octets,
-            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
-        ]
-        let statut = SecItemAdd(requete as CFDictionary, nil)
+        let statut = SecItemAdd(requeteEcriture(octets) as CFDictionary, nil)
         guard statut != errSecSuccess else { return }
         Trace.erreur("lien", "trousseau refusé (OSStatus \(statut)) — repli sur fichier protégé")
         ecrireRepli(octets)
     }
 
     public func lire() -> String? {
-        let requete: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: compte,
-            kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne,
-        ]
-        var trouve: CFTypeRef?
-        let statut = SecItemCopyMatching(requete as CFDictionary, &trouve)
-        // Le cast est le seul possible : l'API Security rend un CFTypeRef opaque.
-        if statut == errSecSuccess, let octets = trouve as? Data {
-            return String(data: octets, encoding: .utf8)
-        }
-        return lireRepli()
+        lireDuTrousseau() ?? lireRepli()
     }
 
     public func effacer() {
@@ -82,6 +84,50 @@ public struct CoffreJeton: Sendable {
         } catch {
             Trace.erreur("lien", "repli du jeton non supprimé", error)
         }
+    }
+
+    /// Aller-retour réel, pour le diagnostic. Dit par quelle voie la valeur est
+    /// revenue — le trousseau et son repli fichier n'ont ni la même durée de vie
+    /// ni la même survie à une réinstallation, et confondre les deux ferait
+    /// croire la session persistée alors qu'elle tient à un fichier.
+    ///
+    /// N'utiliser QUE sur un coffre au compte dédié : la valeur témoin écrase
+    /// celle du compte visé.
+    public func essai() -> VoieJeton {
+        let temoin = "vigie-essai-\(UUID().uuidString)"
+        guard let octets = temoin.data(using: .utf8) else { return .echec }
+        effacerDuTrousseau()
+        let statut = SecItemAdd(requeteEcriture(octets) as CFDictionary, nil)
+        defer { effacer() }
+        if statut == errSecSuccess {
+            return lireDuTrousseau() == temoin ? .trousseau : .echec
+        }
+        ecrireRepli(octets)
+        return lireRepli() == temoin ? .repliFichier : .echec
+    }
+
+    private func requeteEcriture(_ octets: Data) -> [String: Any] {
+        [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: compte,
+            kSecValueData as String: octets,
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
+        ]
+    }
+
+    private func lireDuTrousseau() -> String? {
+        let requete: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: compte,
+            kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne,
+        ]
+        var trouve: CFTypeRef?
+        guard SecItemCopyMatching(requete as CFDictionary, &trouve) == errSecSuccess,
+              let octets = trouve as? Data else { return nil }
+        return String(data: octets, encoding: .utf8)
     }
 
     private func effacerDuTrousseau() {

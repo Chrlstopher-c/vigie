@@ -21,6 +21,11 @@
 	<string>Comparer le coût énergétique du maintien en vie par localisation avec celui de la session audio. Aucune position n'est enregistrée ni transmise.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>Le maintien en vie par localisation exige l'autorisation « Toujours ». Précision réglée à trois kilomètres : le GPS n'est jamais sollicité, et aucune position n'est enregistrée ni transmise.</string>
+	<!-- `☠` Sans cette clé, le premier appel à LocalAuthentication ne rend pas
+	     une erreur : il TUE le processus. Elle garde les gestes engageants —
+	     autoriser un mandat, terminer une équipe. -->
+	<key>NSFaceIDUsageDescription</key>
+	<string>Confirmer les décisions qui engagent une dépense : autoriser un mandat, accorder une rallonge, terminer une équipe.</string>
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>
 		<string>com.echo.labs.refresh</string>

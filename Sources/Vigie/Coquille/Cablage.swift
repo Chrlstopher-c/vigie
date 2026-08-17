@@ -37,10 +37,17 @@ public final class Cablage {
         liaison = Liaison()
     }
 
-    /// Ouvre le miroir et branche le bandeau d'état sur le flux du client.
-    /// Appelé une seule fois par la coquille, avant le premier écran.
+    /// Ouvre le miroir, branche le bandeau d'état sur le flux du client, et
+    /// arme le canal d'alerte. Appelé une seule fois par la coquille, avant le
+    /// premier écran.
     public func amorcer() async {
         await miroir.charger()
+        CentreAlerte.partage.brancher(client: client)
+        ActionRecue.partage.brancher(client: client)
+        await CentreAlerte.partage.demarrer()
+        // Le canal 1. Coupé, il ne reste que le rattrapage d'ouverture et les
+        // réveils de fond — c'est un réglage, donc une décision de Chris.
+        if PreferencesAlerte.maintienEnVie { MaintienVie.partage.demarrer() }
         // Tâche non structurée assumée : elle vit aussi longtemps que
         // l'application. C'est le seul drain du flux de verdicts — l'ouvrir
         // ailleurs volerait les événements à celui-ci.

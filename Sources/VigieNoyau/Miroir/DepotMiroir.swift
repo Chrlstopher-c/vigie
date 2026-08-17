@@ -22,6 +22,12 @@ public actor DepotMiroir {
         instantane = Instantane()
     }
 
+    /// Le fichier réellement utilisé. `☠` Lu par le diagnostic pour dire où le
+    /// miroir vit — jamais persisté : le conteneur change d'UUID à chaque pose
+    /// d'IPA resigné, un chemin absolu retenu d'un lancement à l'autre pointerait
+    /// dans le vide.
+    public nonisolated var emplacement: URL { fichier }
+
     /// `Application Support/Vigie/miroir.json`. Hors de `Documents` : ce n'est ni
     /// une production de l'utilisateur ni quelque chose à exposer par iTunes.
     private static func emplacementParDefaut() -> URL {
