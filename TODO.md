@@ -1,5 +1,68 @@
 # Vigie — à faire
 
+## 🔴 URGENT — le PC et le VPS sont confondus dans tout le produit
+
+Constaté sur l'appareil le 2026-08-17 : fil créé sur le PC, basculé sur le VPS,
+**l'affichage ne bouge pas** ; et partout dans l'app on lit « PC en ligne » /
+« PC éteint » alors que le PC est éteint **et que le fil tourne sur le VPS**.
+L'app parle d'une machine qui n'a rien à voir avec ce qui est regardé.
+
+### Racine A — l'état d'UNE machine est présenté comme l'état de la liaison
+
+`Lecture.pcEnLigne` (`Contrat/Enveloppe.swift`) vaut `true` sur `.fraiche` et
+`false` sur tout le reste : il ne dit donc pas « le PC est éteint » mais
+**« ce relevé a été servi daté »**. `Liaison.appliquer` en fait un régime
+**global** `.posteEteint`, libellé « PC éteint », affiché en permanence en haut de
+**tous** les écrans — y compris sur un fil hébergé par le VPS.
+
+Trois notions distinctes ont fusionné et doivent être re-séparées :
+
+1. **La liaison au Pi** — joignable / perdue / session à rouvrir. Globale, c'est
+   la seule chose qui mérite un bandeau permanent.
+2. **La fraîcheur d'un relevé** — `.fraiche` vs `.datee`. Propriété **du relevé**
+   affiché, pas du parc. C'est déjà ce que porte `MentionFraicheur`.
+3. **L'état d'une machine** — `MachineApi.enLigne`, **par machine**, lu sur
+   `/machines`. Le poste de travail n'est qu'une machine parmi N.
+
+Cible : le bandeau global ne parle plus jamais du PC. L'état d'une machine ne
+s'affiche que là où cette machine est le sujet (carte de machine, fil qui y
+tourne, session tmux qui en dépend). Quand le PC dort et que le VPS travaille,
+l'app doit dire « le parc tourne », jamais « PC éteint ».
+
+`☠` Ne pas jeter la distinction pour autant : les routes natives `pi-web`
+(`/api/status`, `/api/sessions`, `/api/launch`, tmux) sont **réellement** adossées
+au seul poste de travail, et `pcAbsent` y garde tout son sens. C'est **là** que
+« le PC dort » est la bonne phrase — et nulle part ailleurs.
+
+### Racine B — la machine d'un fil n'est pas relue après un changement
+
+`DetailFilApi` ne porte **pas** de champ `machine` (commentaire assumé dans
+`Contrat/FilEvenement.swift` : « la machine d'un fil se lit sur la liste, pas sur
+le détail »). Après un `POST /machine`, l'écran de conversation n'a donc rien à
+relire : la valeur affichée vient du `FilApi` de la **liste**, rafraîchi seulement
+en revenant en arrière. D'où « rien ne bouge ».
+
+Deux issues, la première est la bonne :
+- [ ] Ajouter `machine` à la réponse du détail côté serveur, et au contrat.
+- [ ] À défaut : relire la liste des fils après l'écriture, et propager.
+
+### À faire aussi dans la foulée
+
+- [ ] Nommer les machines par leur identité réelle partout (poste, VPS, …) plutôt
+      que par « PC » — le mot désigne une machine précise, pas une catégorie.
+- [ ] Vérifier que le changement de machine d'un fil **aboutit réellement**
+      côté serveur (`ReglagesFilFeuille.swift:165`) : le symptôme observé est
+      compatible avec un affichage figé comme avec une écriture sans effet.
+
+## Ergonomie — le glissement de bord a disparu
+
+La refonte masque la barre de navigation système (`.toolbar(.hidden)` dans la
+coquille et quatre écrans), ce qui neutralise l'`interactivePopGestureRecognizer` :
+le retour arrière ne se fait plus que par le chevron. Sur une app tenue d'une
+main c'est un idiome perdu.
+
+- [ ] Rétablir le glissement de bord tout en gardant l'en-tête de la charte.
+
 ## D'abord : confronter au réel
 
 1. **Poser l'IPA sur l'iPhone** et ouvrir chaque écran. Rien de ce qui suit n'a
