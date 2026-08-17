@@ -1,9 +1,9 @@
-// La carte d'une décision : ce qu'on lit avant de trancher, et les deux gestes.
+// La carte d'une décision : le rail coloré sur la tranche, l'engagement au
+// même rang que le titre, et les deux gestes sous le pouce.
 //
-// `☠` H-61 — autorisation ÉCLAIRÉE : le droit réel (`acces`) est au même rang
-// que le titre, jamais replié. Une équipe annoncée « lecture seule » recevait
-// les mêmes outils qu'une équipe de modification tant que ce champ n'était pas
-// montré ; le périmètre, lui, est purement descriptif et ne verrouille rien.
+// `☠` H-61 — autorisation ÉCLAIRÉE : le droit réel (`acces`) n'est jamais
+// replié. Une équipe annoncée « lecture seule » recevait les mêmes outils
+// qu'une équipe de modification tant que ce champ n'était pas montré.
 #if canImport(SwiftUI)
 import SwiftUI
 import VigieNoyau
@@ -11,35 +11,41 @@ import VigieNoyau
 struct CarteDecision: View {
     let decision: Decision
     let rang: Int
+    /// Un geste est en vol quelque part dans la file : les boutons s'éteignent.
     let occupee: Bool
+    /// Confirmée tranchée par le serveur : tamponnée jusqu'au relevé suivant.
+    let tranchee: Bool
     let conduite: ConduiteApresConflit?
     let accorder: () async -> Void
     let refuser: () async -> Void
 
     var body: some View {
-        CarteVigie(relief: ecritureOuverte ? .active : .bordee(etat)) {
-            VStack(alignment: .leading, spacing: Espace.carte) {
+        Panneau(rail: tranchee ? .sain : ton) {
+            VStack(alignment: .leading, spacing: Trame.element) {
                 entete
                 corpsDeLaCarte
                 if let conduite { BlocConduite(conduite: conduite) }
-                if conduite?.reArmable ?? true { gestes }
+                pied
             }
         }
-        .apparitionDouce(rang: rang)
+        .opacity(tranchee ? 0.65 : 1)
+        .animation(Elan.pose, value: tranchee)
+        .entreeEnScene(rang: rang)
+        .sensoryFeedback(Haptique.reussite, trigger: tranchee) { _, faite in faite }
     }
 
-    // MARK: - En-tête
+    // MARK: - Composition
 
     private var entete: some View {
-        HStack(spacing: Espace.serre) {
-            Image(systemName: decision.genre.symbole)
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(etat.teinte)
-            PastilleEtat(decision.genre.titre, etat: etat)
+        HStack(spacing: Trame.serre) {
+            Sceau(decision.genre.titre, ton: ton)
+            Text(portee)
+                .mention()
+                .foregroundStyle(Teinte.encreTernie)
             Spacer(minLength: 0)
             Text(Lisible.heure(millisecondes))
-                .monoMinuscule()
-                .foregroundStyle(Couleurs.texteTertiaire)
+                .donneePetite()
+                .foregroundStyle(Teinte.encreTernie)
         }
     }
 
@@ -51,22 +57,46 @@ struct CarteDecision: View {
         }
     }
 
-    // MARK: - Gestes
+    @ViewBuilder private var pied: some View {
+        if tranchee {
+            tampon
+        } else if conduite?.reArmable ?? true {
+            gestes
+        }
+    }
 
-    /// Deux boutons, jamais un seul geste ambigu, et jamais de confirmation
+    /// Deux boutons, jamais un geste ambigu, et jamais de confirmation
     /// intermédiaire : la garde biométrique EST la confirmation.
     private var gestes: some View {
-        HStack(spacing: Espace.standard) {
+        HStack(spacing: Trame.element) {
             Button(libelleRefus) { Task { await refuser() } }
-                .buttonStyle(.vigieDestructif)
+                .buttonStyle(.allureDanger)
                 .disabled(occupee)
             Button(libelleAccord) { Task { await accorder() } }
-                .buttonStyle(.vigieAccent)
+                .buttonStyle(.allureAccent)
                 .disabled(occupee)
         }
-        .frame(maxWidth: .infinity)
         .opacity(occupee ? 0.5 : 1)
+        .animation(Elan.vif, value: occupee)
     }
+
+    /// Le tampon d'une carte tranchée : elle reste en place jusqu'au relevé
+    /// suivant — c'est le serveur qui vide la file, jamais l'écran.
+    private var tampon: some View {
+        HStack(spacing: Trame.serre) {
+            Image(systemName: "checkmark.seal.fill")
+                .font(.system(size: 13, weight: .semibold))
+            Text("Tranchée — la file se relève au prochain battement")
+                .note()
+        }
+        .foregroundStyle(Teinte.sain)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, Trame.serre)
+        .background(Ton.sain.voile, in: RoundedRectangle(cornerRadius: Galbe.encart, style: .continuous))
+        .transition(.opacity.combined(with: .scale(scale: 0.96)))
+    }
+
+    // MARK: - Libellés
 
     private var libelleAccord: String {
         switch decision {
@@ -83,21 +113,22 @@ struct CarteDecision: View {
         }
     }
 
-    // MARK: - Formes
-
-    private var etat: EtatSemantique {
-        switch decision.genre {
-        case .arbitrage: return .danger
-        case .mandat: return .accent
-        case .rallonge: return .vigilance
+    /// Ce que trancher ENGAGE, en trois mots — la ligne qui empêche de
+    /// confondre les trois circuits.
+    private var portee: String {
+        switch decision {
+        case .mandat: return "démarre une équipe"
+        case .rallonge: return "n'ouvre aucune équipe"
+        case .arbitrage: return "équipe en boucle"
         }
     }
 
-    /// Seul un mandat en écriture engage une modification de fichiers : c'est ce
-    /// qui justifie le relief le plus appuyé de la charte.
-    private var ecritureOuverte: Bool {
-        guard case .mandat(let proposition) = decision else { return false }
-        return proposition.acces.ouvreLEcriture
+    private var ton: Ton {
+        switch decision.genre {
+        case .mandat: return .attention
+        case .arbitrage: return .danger
+        case .rallonge: return .veille
+        }
     }
 
     private var millisecondes: Int {
@@ -109,35 +140,43 @@ struct CarteDecision: View {
     }
 }
 
-/// Le refus du serveur, mot pour mot, et la conduite à tenir — jamais l'un sans
-/// l'autre : le message dit ce qui s'est passé, jamais où aller.
+/// Le refus du serveur, mot pour mot, et la conduite à tenir — jamais l'un
+/// sans l'autre : le message dit ce qui s'est passé, jamais où aller.
 private struct BlocConduite: View {
     let conduite: ConduiteApresConflit
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Espace.fin) {
-            HStack(spacing: Espace.serre) {
-                PastilleEtat(conduite.titre, etat: conduite.etat)
+        VStack(alignment: .leading, spacing: Trame.serre) {
+            HStack(spacing: Trame.serre) {
+                Sceau(conduite.titre, ton: ton)
                 Spacer(minLength: 0)
                 if let sceau = conduite.sceau {
                     Text(sceau)
-                        .etiquetteMinuscule()
-                        .foregroundStyle(conduite.etat.encreSurVoile)
+                        .mention()
+                        .foregroundStyle(ton.teinte)
                 }
             }
             Text(conduite.motifServeur)
-                .monoPetit()
-                .foregroundStyle(Couleurs.encre)
+                .donneePetite()
+                .foregroundStyle(Teinte.encre)
             Text(conduite.conduite)
-                .legende()
-                .foregroundStyle(Couleurs.texteSecondaire)
+                .mention()
+                .foregroundStyle(Teinte.encreDouce)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(Espace.standard)
-        .background(
-            conduite.etat.voile,
-            in: RoundedRectangle(cornerRadius: Rayon.encart, style: .continuous)
-        )
+        .padding(Trame.element)
+        .background(ton.voile, in: RoundedRectangle(cornerRadius: Galbe.encart, style: .continuous))
+        .transition(.opacity.combined(with: .move(edge: .top)))
+    }
+
+    private var ton: Ton {
+        switch conduite.etat {
+        case .danger: return .danger
+        case .vigilance: return .vigilance
+        case .sain: return .sain
+        case .accent: return .attention
+        case .neutre: return .neutre
+        }
     }
 }
 #endif
