@@ -20,6 +20,8 @@ struct VueBlocAgent: View {
             BandeauNote(texte, ton: .danger)
         case .fait(_, let texte, let at):
             VueFaitHarness(texte: texte, at: at)
+        case .artefact(_, let piece, _):
+            CarteArtefact(piece: piece)
         }
     }
 }

@@ -79,6 +79,12 @@ public struct TypeEvenementApi: JetonContrat {
     public static let mandat = TypeEvenementApi(rawValue: "mandat")
     /// Un fait du parc, JAMAIS une parole de Chris (H-66).
     public static let notification = TypeEvenementApi(rawValue: "notification")
+    /// Un contenu que l'orchestrateur produit lui-même — script shell/Python/Lua
+    /// ou page HTML — affiché dans le fil au lieu d'être noyé dans un bloc de
+    /// texte (migration 30 côté serveur). `contenu` porte le nom d'affichage,
+    /// la pièce elle-même vit dans `pieces` — même descriptif qu'un message
+    /// opérateur, un seul élément.
+    public static let artefact = TypeEvenementApi(rawValue: "artefact")
 }
 
 /// Type d'une ligne du fil d'une mission (`vue-feed.ts`).

@@ -28,6 +28,61 @@ Ce qui existe, par domaine :
 | `Diagnostic/` | sonde de chaîne, écran caché (appui long sur la version) |
 | `VigieNoyau/` | contrat, miroir, veille, markdown, parc, machines, fil — intouché |
 
+## 2026-08-19 — Artefacts : script/HTML de l'orchestrateur affichés dans le fil
+
+Le serveur a gagné cette nuit un type d'évènement `artefact` (migration 30,
+`ccremote` branche `equipe/…` non fusionnée sur `master`, commit `cf81381`) :
+l'orchestrateur peut produire un script (shell/Python/Lua) ou une page HTML et
+le présenter comme un bloc du fil, avec la MÊME forme qu'une pièce jointe
+(`PieceJointeApi` — réutilisé tel quel, aucun nouveau contrat). Vigie l'affiche
+désormais.
+
+Nouveau, dans `VigieNoyau/Fil/` (pur, testé) :
+- `TypeEvenementApi.artefact` (`Contrat/Jetons.swift`).
+- `LangageArtefact` — reconnaissance du langage par EXTENSION du nom de
+  fichier (`.html/.sh/.py/.lua`, liste fermée, alignée sur le serveur), pas par
+  le MIME servi.
+- `BlocAgent.artefact(seq:piece:at:)` et son branchement dans
+  `SegmentationFil` — sans lui, un évènement `artefact` retombait dans le
+  `default:` et se lisait comme un simple `.fait` texte, sans code ni pièce.
+
+Nouveau domaine `Sources/Vigie/Artefact/` (app, non testable par `swift test` —
+SwiftUI/WebKit) :
+- `CarteArtefact.swift` — badge de langage, nom, taille, code en clair
+  (`Teinte.terminalFond`/`terminalTexte`, même traitement que les blocs de code
+  markdown), bascule Code/Rendu pour le HTML, partage/export par `ShareLink`
+  sur une copie locale nommée comme la pièce.
+- `RenduHTMLIsole.swift` — le rendu HTML, contenu NON FIABLE. Mécanisme
+  d'isolement (documenté en tête de fichier, à faire confirmer par Chris sur
+  l'appareil — pas de simulateur ici) : `WKWebViewConfiguration.websiteDataStore
+  = .nonPersistent()` + `loadHTMLString(_:baseURL: nil)` (origine opaque) +
+  `WKNavigationDelegate` qui refuse toute navigation hors du chargement
+  initial + `createWebViewWith` qui bloque `window.open`. Filet supplémentaire,
+  propre à Vigie : le jeton de session ne vit dans AUCUN `WKWebsiteDataStore` —
+  `ClientPi` le pose à la main en en-tête `Cookie:` sur `URLSession`, jamais
+  via `WKHTTPCookieStore` — donc rien à lire même en cas de fuite du sandbox.
+
+**10 tests du noyau ajoutés sur ce domaine** (135 au total, 0 régression), IPA
+recompilé et signé par `build.sh` (17 Mo, aucune erreur). Les tests de
+décodage/segmentation ont été éprouvés dans les deux sens : branchement
+`.artefact` annulé → 3 tests rouges (l'évènement retombait en `.fait`
+générique, sans pièce) ; `LangageArtefact.depuis` cassé → 8 tests rouges ; les
+deux restaurés, suite verte à nouveau.
+
+`☠` **Non éprouvé, faute d'appareil** — à valider par Chris :
+- Le rendu visuel de la carte (alignement, lisibilité, cohérence avec la
+  charte à l'œil).
+- Le mécanisme d'isolement de `RenduHTMLIsole` en conditions réelles : aucun
+  Playwright ni WebKit Inspector sur cette chaîne pour rejouer la preuve
+  « `document.cookie` lève une exception » que l'équipe serveur a faite en
+  navigateur. Le raisonnement (origine opaque + magasin éphémère + navigation
+  bloquée + jeton jamais dans un `WKWebsiteDataStore`) est solide mais reste
+  un raisonnement, pas une mesure.
+- `ShareLink` sur la copie locale : le nom de fichier et l'extension
+  survivent-ils réellement à un envoi Mail/AirDrop/Fichiers ?
+- Cohabitation avec le reste du fil en défilement (un artefact volumineux
+  dans une longue conversation).
+
 ## Ce qui n'a JAMAIS été exercé
 
 `☠` **Aucune requête HTTP réelle n'a été faite contre le Pi.** Toutes les formes

@@ -66,11 +66,16 @@ public enum BlocAgent: Sendable, Hashable, Identifiable {
     /// `☠` JAMAIS rendu comme une parole de Chris — en relisant le fil, on
     /// croirait qu'il a demandé ce que le harness a annoncé tout seul.
     case fait(seq: Int, texte: String, at: Int)
+    /// Un contenu que l'orchestrateur produit lui-même — script ou page HTML —
+    /// affiché comme une carte dédiée. `piece` à `nil` : le fichier a disparu
+    /// du disque du Pi, même trou que le front web (`!piece.url`).
+    case artefact(seq: Int, piece: PieceJointeApi?, at: Int)
 
     public var id: Int {
         switch self {
         case .parole(let seq, _, _), .reflexion(let seq, _, _),
-             .echec(let seq, _, _), .fait(let seq, _, _): return seq
+             .echec(let seq, _, _), .fait(let seq, _, _),
+             .artefact(let seq, _, _): return seq
         case .outils(let groupe): return groupe.id
         }
     }
@@ -78,7 +83,8 @@ public enum BlocAgent: Sendable, Hashable, Identifiable {
     public var at: Int {
         switch self {
         case .parole(_, _, let at), .reflexion(_, _, let at),
-             .echec(_, _, let at), .fait(_, _, let at): return at
+             .echec(_, _, let at), .fait(_, _, let at),
+             .artefact(_, _, let at): return at
         case .outils(let groupe): return groupe.appels.last?.at ?? 0
         }
     }
