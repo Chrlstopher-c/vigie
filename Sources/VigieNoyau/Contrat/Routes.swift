@@ -98,8 +98,14 @@ public enum Route {
     public static let configuration = "/api/config"
     public static let comptesClaude = "/api/claude-accounts"
     public static let basculerCompteClaude = "/api/claude-accounts/switch"
-    public static let contexteAgent = "/api/agent/context-usage"
     public static let connexion = "/login"
+
+    /// `☠` HORS PÉRIMÈTRE, décision de Chris du 2026-08-18 : l'agent
+    /// conversationnel de la webapp v1 (`/api/agent/chat`, `/api/agent/usage`,
+    /// `/api/agent/context-usage`) ne sera PAS porté. Vigie est le client de
+    /// l'orchestrateur et du parc, pas un second chat. Ne pas rouvrir en
+    /// croyant combler un oubli : c'est un retrait assumé.
+    public static let agentWebappHorsPerimetre = "/api/agent/chat"
 
     /// `☠` HORS PÉRIMÈTRE v1, et l'omission est délibérée : `POST /api/shutdown`
     /// éteint la machine de travail. Sur un écran tenu

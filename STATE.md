@@ -7,7 +7,7 @@ le reste). Chaîne de compilation portée d'EchoLabs, bundle `com.echo.labs`.
 ## Au 2026-08-17 — refonte « Quart de nuit »
 
 **Frontend intégralement refondu (DA sombre, voir `Sources/Vigie/Charte/CHARTE.md`).
-Compile en `xtool/Vigie.ipa`, 117 tests du noyau verts. Toutes les capacités du
+Compile en `xtool/Vigie.ipa`, 117 tests du noyau verts à cette date. Toutes les capacités du
 contrat ont désormais une surface.**
 
 Ce qui existe, par domaine :
@@ -22,11 +22,33 @@ Ce qui existe, par domaine :
 | `Fil/` | liste + création, conversation-document, moteur par message, tenue ⋯ (renommer/machine/autonomie/rappels/compacter/archiver) |
 | `Parc/` | fil segmenté en valises, sous-agents navigables, instruction au lead |
 | `Machines/` | jauges à seuils, quotas 5 h/7 j, réveil du poste |
+| `Dictee/` | dictée locale (Speech, A12), micro dans le composeur du fil — **vue tourner sur l'appareil** |
 | `Terminal/` | ^C/^D armés, capture collée au bas, barre de touches |
 | `Alerte/` | canal + faits du parc (lu/remis distincts, marquer lu) |
 | `Reglages/` | serveur, orchestrateur, alerte, à propos + signature |
 | `Diagnostic/` | sonde de chaîne, écran caché (appui long sur la version) |
 | `VigieNoyau/` | contrat, miroir, veille, markdown, parc, machines, fil — intouché |
+
+## 2026-08-18 — `/health` branché
+
+`GET /health` était déclaré, décodé et mémorisé, et **appelé nulle part** : Vigie
+déduisait tout de la fraîcheur des relevés. Il est désormais la première lecture
+du lot de `ReleveParc`, et son verdict est croisé avec `/api/status` dans
+`EtatChaine` (noyau, 6 tests).
+
+Ce que ça donne de neuf, et que rien ne disait avant :
+
+- **control plane muet** — un bandeau explique le vide de l'écran, au lieu d'un
+  « échec de lecture » qui ne dit pas où ça casse.
+- **superviseur tombé** — poste allumé, control plane qui ne le voit pas. C'est
+  exactement le défaut du 14/08 côté ccremote : toutes les routes du harness
+  répondaient « machine absente » sur une machine parfaitement vivante.
+
+`☠` Un échec de `/health` ne se dit PAS en `dernierEchec` : c'est la première des
+cinq requêtes du lot, et si elle tombe les quatre autres tomberont pareil. Le
+message reviendrait cinq fois pour une seule panne.
+
+**144 tests du noyau verts, IPA recompilé.**
 
 ## Ce qui n'a JAMAIS été exercé
 
@@ -37,8 +59,13 @@ une session de codage.
 
 `☠` **L'IPA n'a pas été posé sur l'appareil depuis que ces domaines existent.**
 Rien de ce qui touche `UserNotifications`, `BGTaskScheduler`, `LocalAuthentication`
-ni la veille audio n'a été vu tourner dans cette application-ci (les mesures
-d'EchoLabs, elles, tiennent — voir `PLAN-VIGIE.md`).
+ni la veille audio n'a été vu tourner dans cette application-ci. (Les mesures
+d'EchoLabs, elles, tiennent — voir `PLAN-VIGIE.md`.)
+
+**Exception, 2026-08-18 : la dictée a tourné sur l'appareil et fonctionne.**
+Reste à vérifier au prochain passage la cohabitation micro / canal d'alerte —
+dicter pendant que `MaintienVie` tient sa session est raisonné, pas encore
+mesuré.
 
 ## Côté serveur : rien n'est fait
 

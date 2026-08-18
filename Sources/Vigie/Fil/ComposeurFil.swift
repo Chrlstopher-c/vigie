@@ -23,6 +23,7 @@ struct ComposeurFil: View {
     let interrompre: () -> Void
 
     @State private var selectionPhotos: [PhotosPickerItem] = []
+    @State private var dictee = DicteeSonde()
 
     private var videDeContenu: Bool {
         texte.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && pieces.isEmpty
@@ -30,14 +31,28 @@ struct ComposeurFil: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Trame.serre) {
+            if let raison = dictee.empechement {
+                BandeauNote(raison, ton: .vigilance, symbole: "mic.slash.fill")
+            }
+            if dictee.actif { LisereDictee() }
             if !pieces.isEmpty { rangeePieces }
             HStack(alignment: .bottom, spacing: Trame.serre) {
                 trombone
+                BoutonDictee(dictant: dictee.actif) { Task { await basculerDictee() } }
                 ChampQuart(texte: $texte, placebo: "Message à l'orchestrateur…", lignes: 1...6)
                     .frame(maxWidth: .infinity)
                 boutonEnvoi
             }
             piedMoteur
+        }
+        .animation(Elan.pose, value: dictee.actif)
+        // Un seul sens à la fois : la sonde écrit dans le champ, et une frappe
+        // au clavier redevient la base de la dictée. Sans cette seconde branche,
+        // le mot suivant écraserait la correction que Chris vient de taper.
+        .onChange(of: dictee.texte) { _, nouveau in texte = nouveau }
+        .onChange(of: texte) { _, nouveau in
+            guard dictee.actif, nouveau != dictee.texte else { return }
+            dictee.reprendreSur(nouveau)
         }
         .padding(.horizontal, Trame.ecran)
         .padding(.top, Trame.serre)
@@ -81,6 +96,22 @@ struct ComposeurFil: View {
         .accessibilityLabel("Joindre une image")
     }
 
+    // MARK: - Dictée
+
+    private func basculerDictee() async {
+        guard !dictee.actif else { return dictee.arreter() }
+        dictee.oublierEmpechement()
+        await dictee.demarrer(brouillon: texte)
+    }
+
+    /// Le micro se coupe AVANT que le champ ne se vide : une transcription qui
+    /// survivrait à l'envoi réécrirait le brouillon suivant avec la phrase déjà
+    /// partie.
+    private func envoyerEtCouper() {
+        dictee.arreter()
+        envoyer()
+    }
+
     // MARK: - Envoi / arrêt
 
     @ViewBuilder private var boutonEnvoi: some View {
@@ -95,7 +126,7 @@ struct ComposeurFil: View {
             .buttonStyle(.plain)
             .accessibilityLabel("Interrompre la génération")
         } else {
-            Button(action: envoyer) {
+            Button(action: envoyerEtCouper) {
                 Image(systemName: "arrow.up")
                     .font(.system(size: 16, weight: .bold))
                     .foregroundStyle(Teinte.encreSurAccent)
