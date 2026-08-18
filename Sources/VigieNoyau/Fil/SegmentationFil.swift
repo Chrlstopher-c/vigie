@@ -56,6 +56,7 @@ struct Constructeur {
         case .reflexion: poserBloc(.reflexion(seq: evenement.seq, texte: evenement.contenu, at: evenement.at), evenement)
         case .erreur: poserBloc(.echec(seq: evenement.seq, texte: evenement.contenu, at: evenement.at), evenement)
         case .notification: poserBloc(.fait(seq: evenement.seq, texte: nettoyerFait(evenement.contenu), at: evenement.at), evenement)
+        case .artefact: poserBloc(.artefact(seq: evenement.seq, piece: evenement.pieces.first, at: evenement.at), evenement)
         default: poserBloc(.fait(seq: evenement.seq, texte: evenement.contenu, at: evenement.at), evenement)
         }
     }
