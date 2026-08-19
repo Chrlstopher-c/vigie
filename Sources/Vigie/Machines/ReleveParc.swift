@@ -31,6 +31,9 @@ public final class ReleveParc {
 
     // MARK: Poste de travail
     public private(set) var posteEnLigne: Bool?
+    /// `GET /health` : ce que le control plane, lui, croit du parc. Distinct de
+    /// `posteEnLigne`, qui vient du websocket du serveur de sessions.
+    public private(set) var sante: SanteApi?
     public private(set) var claudeEnCours: Bool?
     public private(set) var comptesClaude: [CompteClaudeApi] = []
     public private(set) var config: ConfigApi?
@@ -58,6 +61,11 @@ public final class ReleveParc {
 
     public var mentionParc: String { ChargeMachines.mention(machines: machines) }
 
+    /// Le verdict croisé des deux sources — voir `EtatChaine`.
+    public var etatChaine: EtatChaine {
+        EtatChaine.lire(sante: sante, posteJoignable: posteEnLigne)
+    }
+
     public func equipesDe(_ machine: String) -> [MissionApi] { equipes[machine] ?? [] }
 
     public func metriquesDe(_ machine: String) -> MetriquesHote? { metriques[machine]?.metriques }
@@ -78,6 +86,9 @@ public final class ReleveParc {
         }
         if let cache = await miroir.lire([AccountApi].self, .comptes) {
             rangerComptes(cache.valeur, a: cache.releveA)
+        }
+        if let cache = await miroir.lire(SanteApi.self, .sante) {
+            sante = cache.valeur
         }
         await ouvrirPoste(miroir: miroir)
     }
@@ -124,6 +135,7 @@ public final class ReleveParc {
         enCours = true
         dernierEchec = nil
         mentionDatee = nil
+        await lireSante(client)
         await lireMachines(client)
         await lireMissions(client)
         await lireComptes(client)
@@ -153,6 +165,14 @@ public final class ReleveParc {
     }
 
     // MARK: - Une route, une méthode
+
+    /// `☠` Un échec ici ne se dit PAS en `dernierEchec` : `/health` est la
+    /// première requête du lot, et si elle tombe les quatre suivantes tomberont
+    /// pareil. Le message reviendrait cinq fois pour une seule panne. On perd
+    /// simplement le verdict, ce que `.inconnu` dit à sa place.
+    private func lireSante(_ client: ClientPi) async {
+        sante = try? await client.lireNu(SanteApi.self, Route.sante, memoriser: .sante).get()
+    }
 
     private func lireMachines(_ client: ClientPi) async {
         let lecture = await client.lire([MachineApi].self, Route.machines, memoriser: .machines)

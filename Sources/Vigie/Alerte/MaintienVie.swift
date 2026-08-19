@@ -62,6 +62,25 @@ public final class MaintienVie {
         statut = "inactif"
     }
 
+    /// Reprend la session après une capture micro (la dictée), qui a dû poser sa
+    /// propre catégorie sur la session — unique pour tout le processus.
+    ///
+    /// `☠` Sans ce rappel, la première dictée tuait le canal numéro un en
+    /// silence : la catégorie de capture arrête la boucle, et personne n'émet
+    /// d'`interruptionNotification` pour une interruption qu'on s'inflige
+    /// soi-même.
+    ///
+    /// - Returns: `true` si le maintien en vie a repris la main. L'appelant ne
+    ///   doit alors surtout pas désactiver la session.
+    public func reprendreApresCapture() -> Bool {
+        guard demande else { return false }
+        lecteur?.stop()
+        lecteur = nil
+        actif = false
+        engager()
+        return true
+    }
+
     private func engager() {
         do {
             let session = AVAudioSession.sharedInstance()

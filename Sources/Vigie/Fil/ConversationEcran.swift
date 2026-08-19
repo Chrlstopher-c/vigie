@@ -39,6 +39,7 @@ struct ConversationEcran: View {
     @State private var feuilleMoteur = false
     @State private var feuilleReglages = false
     @State private var colleBas = true
+    @State private var loinDuBas = false
     @State private var avis: String?
 
     private var cle: String { "fil.\(identifiant)" }
@@ -119,14 +120,44 @@ struct ConversationEcran: View {
             }
             .scrollIndicators(.hidden)
             .scrollDismissesKeyboard(.interactively)
-            .onScrollGeometryChange(for: CGFloat.self) { geometrie in
-                geometrie.contentSize.height - geometrie.contentOffset.y - geometrie.containerSize.height
-            } action: { _, distance in
-                colleBas = distance < 60
+            .onScrollGeometryChange(for: EtatDefilement.self) { geometrie in
+                EtatDefilement(
+                    distanceAuBas: geometrie.contentSize.height
+                        - geometrie.contentOffset.y - geometrie.containerSize.height,
+                    hauteurVisible: geometrie.containerSize.height,
+                    hauteurTotale: geometrie.contentSize.height,
+                    messages: nombreDeTours
+                )
+            } action: { _, etat in
+                colleBas = etat.colleAuBas
+                withAnimation(Elan.vif) { loinDuBas = etat.loinDuBas }
             }
             .onChange(of: curseur) { _, _ in recoller(defilement) }
             .onChange(of: partiel) { _, _ in recoller(defilement) }
+            .overlay(alignment: .bottom) {
+                if loinDuBas {
+                    RetourAuBas { sauterAuBas(defilement) }
+                        .padding(.bottom, Trame.element)
+                }
+            }
         }
+    }
+
+    /// Ce que Chris compte quand il dit « cinq messages » : les tours, pas les
+    /// événements bruts du harness — un seul tour d'agent en contient parfois
+    /// vingt.
+    private var nombreDeTours: Int {
+        segments.count
+    }
+
+    /// Le saut est immédiat, sans ressort : on demande le bas parce qu'on veut
+    /// y être, pas le regarder arriver.
+    private func sauterAuBas(_ defilement: ScrollViewProxy) {
+        withAnimation(Elan.vif) {
+            defilement.scrollTo(Self.ancreBas, anchor: .bottom)
+        }
+        colleBas = true
+        loinDuBas = false
     }
 
     /// On ne recolle au bas que si Chris y était déjà : relire un vieux tour

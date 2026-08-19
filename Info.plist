@@ -26,6 +26,13 @@
 	     autoriser un mandat, terminer une équipe. -->
 	<key>NSFaceIDUsageDescription</key>
 	<string>Confirmer les décisions qui engagent une dépense : autoriser un mandat, accorder une rallonge, terminer une équipe.</string>
+	<!-- `☠` Les deux clés de la dictée. `NSSpeechRecognitionUsageDescription`
+	     est exigée dès qu'on INSTANCIE `SFSpeechRecognizer`, même en mode
+	     strictement local : son absence ne dégrade pas, elle tue le processus. -->
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Dicter un message à l'orchestrateur. La transcription se fait sur l'appareil : aucun son ni aucun texte n'est envoyé à Apple.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Transcrire la dictée en texte, strictement sur l'appareil. Aucun repli par les serveurs d'Apple : sans modèle local, la dictée refuse de démarrer.</string>
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>
 		<string>com.echo.labs.refresh</string>

@@ -61,6 +61,11 @@ public struct MachinesEcran: View {
     }
 
     @ViewBuilder private var avertissements: some View {
+        // La chaîne d'abord : un control plane muet explique tous les vides
+        // affichés en dessous, alors qu'un échec de lecture ne dit pas pourquoi.
+        if let alerte = releve.etatChaine.alerte {
+            BandeauNote(alerte, ton: .danger)
+        }
         if let echec = releve.dernierEchec {
             BandeauNote(echec, ton: .danger)
         } else if let mention = releve.mentionDatee {

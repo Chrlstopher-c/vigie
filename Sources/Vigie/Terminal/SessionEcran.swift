@@ -131,23 +131,17 @@ struct SessionEcran: View {
         .padding(.vertical, 40)
     }
 
+    /// Même pastille que dans un fil — un seul geste « redescendre » dans toute
+    /// l'application. Le seuil, lui, reste propre à l'écran : ici la capture
+    /// vaut pour son bas, et décoller de quelques lignes suffit à vouloir y
+    /// revenir.
     @ViewBuilder private func boutonRetourBas(_ defilement: ScrollViewProxy) -> some View {
         if !colleBas, !captureEpuree.isEmpty {
-            Button {
+            RetourAuBas(intitule: "Revenir au bas du panneau") {
                 defilement.scrollTo(Self.ancreBas, anchor: .bottom)
                 colleBas = true
-            } label: {
-                Image(systemName: "arrow.down")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(Teinte.encre)
-                    .frame(width: 36, height: 36)
-                    .background(Teinte.surfaceHaute, in: Circle())
-                    .overlay(Circle().strokeBorder(Teinte.filetAppuye, lineWidth: Trame.trait))
             }
-            .buttonStyle(.allureIcone)
             .padding(Trame.element)
-            .transition(.scale.combined(with: .opacity))
-            .accessibilityLabel("Revenir au bas du panneau")
         }
     }
 
