@@ -23,6 +23,7 @@ public enum OrigineReleve: String, Codable, Sendable {
     case premierPlan
     case reveilDeFond
     case veilleAudio
+    case veilleLocalisation
     case ouverture
 
     public var libelle: String {
@@ -30,6 +31,7 @@ public enum OrigineReleve: String, Codable, Sendable {
         case .premierPlan: return "premier plan"
         case .reveilDeFond: return "réveil de fond"
         case .veilleAudio: return "veille audio"
+        case .veilleLocalisation: return "veille par localisation"
         case .ouverture: return "ouverture de l'app"
         }
     }
@@ -58,6 +60,17 @@ public struct EtatCanal: Codable, Sendable, Equatable {
     public var audioInterruptions: Int
     public var audioReprises: Int
     public var audioIncident: String?
+    /// Le canal numéro deux — le relais par localisation, qui tient l'app en vie
+    /// pendant qu'une autre app détient l'audio en exclusif.
+    ///
+    /// `☠` Optionnels, et c'est délibéré : cet état est persisté dans
+    /// `UserDefaults`, et le décodage synthétisé de Swift ÉCHOUE sur une clé
+    /// absente même quand la propriété a une valeur par défaut. Non optionnels,
+    /// ces trois champs feraient repartir de zéro tout l'historique du canal
+    /// enregistré avant leur ajout.
+    public var localisationActive: Bool?
+    public var localisationReleves: Int?
+    public var localisationStatut: String?
     /// Alarmes de silence actuellement armées, par échéance.
     public var alarmesArmees: [Date]
     public var expirationSignature: Date?
@@ -111,10 +124,19 @@ public struct EtatCanal: Codable, Sendable, Equatable {
         if derniers.count > Self.journalMax { derniers.removeLast(derniers.count - Self.journalMax) }
     }
 
+    /// Le canal numéro deux tient-il la main en ce moment ?
+    public var localisationTient: Bool { localisationActive == true }
+
     /// Le canal tient-il debout ? Trois conditions, et l'écran doit montrer
     /// laquelle manque plutôt qu'un verdict global opaque.
+    ///
+    /// `☠` `audioActif || localisationTient`, jamais `audioActif` seul : quand
+    /// une autre app prend l'audio — un lecteur de musique, typiquement — le
+    /// canal numéro un tombe et le relais de localisation prend le sien. Exiger
+    /// l'audio afficherait « canal rompu » pendant toute une écoute, alors que
+    /// la veille tourne.
     public var complet: Bool {
-        autorisationAccordee && audioActif && dernierContact != nil
+        autorisationAccordee && (audioActif || localisationTient) && dernierContact != nil
     }
 
     public var autorisationAccordee: Bool { autorisation == "accordée" }

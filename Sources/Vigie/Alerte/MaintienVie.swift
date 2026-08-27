@@ -29,6 +29,10 @@ public final class MaintienVie {
     public private(set) var interruptions = 0
     public private(set) var reprises = 0
     public private(set) var dernierIncident: String?
+    /// Vrai tant qu'une autre app détient l'audio en exclusif. Lu par
+    /// `MaintienVieLocalisation`, qui ne doit prendre le relais que dans cette
+    /// fenêtre-là — jamais quand c'est Chris qui a coupé l'interrupteur.
+    public private(set) var audioInterrompu = false
 
     @ObservationIgnored private var lecteur: AVAudioPlayer?
     @ObservationIgnored private var observateurs: [NSObjectProtocol] = []
@@ -43,6 +47,9 @@ public final class MaintienVie {
 
     public func demarrer() {
         demande = true
+        // Demandée ici, une seule fois : l'invite système doit être posée AVANT
+        // qu'une autre app prenne l'audio, sinon le relais arrive trop tard.
+        MaintienVieLocalisation.partage.demanderAutorisation()
         guard !actif else { return }
         observerIncidents()
         engager()
@@ -50,6 +57,8 @@ public final class MaintienVie {
 
     public func arreter() {
         demande = false
+        audioInterrompu = false
+        MaintienVieLocalisation.partage.arreter()
         boucle?.cancel()
         boucle = nil
         observateurs.forEach(NotificationCenter.default.removeObserver)
@@ -146,10 +155,18 @@ public final class MaintienVie {
         case .began:
             interruptions += 1
             actif = false
+            audioInterrompu = true
             statut = "interrompu par une autre app"
             noter("interruption \(interruptions) — une app a pris l'audio")
+            // `☠` C'est le passage de relais, et il ne peut PAS attendre
+            // `.ended` : une app qui joue un album tient l'audio quarante
+            // minutes. Sans cette ligne, le canal d'alerte reste éteint aussi
+            // longtemps que dure l'écoute.
+            if demande { MaintienVieLocalisation.partage.engager() }
         case .ended:
             reprises += 1
+            audioInterrompu = false
+            MaintienVieLocalisation.partage.arreter()
             noter("reprise \(reprises)")
             if demande { engager() }
         @unknown default:

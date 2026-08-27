@@ -197,6 +197,15 @@ public final class CentreAlerte {
         MemoireAlerte.ecrire(etat)
     }
 
+    /// Rapporté par `MaintienVieLocalisation` : le canal 2, celui qui tient
+    /// pendant qu'une autre app détient l'audio.
+    public func rapporterLocalisation(actif: Bool, releves: Int, statut: String) {
+        etat.localisationActive = actif
+        etat.localisationReleves = releves
+        etat.localisationStatut = statut
+        MemoireAlerte.ecrire(etat)
+    }
+
     /// `☠` Un réveil de fond RÉELLEMENT servi par iOS est une information rare :
     /// c'est ce qui distingue un canal vivant d'un canal qu'on croit vivant.
     public func noterReveil(enregistre: Bool, replanifie: Bool) {

@@ -262,4 +262,36 @@ struct EtatCanalTests {
         let relu = try JSONDecoder().decode(EtatCanal.self, from: JSONEncoder().encode(etat))
         #expect(relu == etat)
     }
+
+    @Test("le canal tient quand le relais de localisation a pris la main")
+    func canalCompletParLocalisation() {
+        var etat = EtatCanal()
+        etat.autorisation = "accordée"
+        etat.noterContact(Date(), origine: .veilleLocalisation)
+        // Une autre app détient l'audio : le canal 1 est tombé.
+        etat.audioActif = false
+        #expect(!etat.complet)
+        etat.localisationActive = true
+        #expect(etat.complet)
+    }
+
+    /// `☠` Le décodage synthétisé de Swift échoue sur une clé absente, même
+    /// quand la propriété porte une valeur par défaut. Ce test tient la
+    /// compatibilité avec les états écrits dans `UserDefaults` AVANT que le
+    /// relais de localisation existe : s'il casse, tout l'historique du canal
+    /// repart de zéro au premier lancement, en silence.
+    @Test("un état écrit avant le relais de localisation se relit encore")
+    func etatAncienDecodable() throws {
+        let ancien = """
+        {"reveilsReels":0,"reveilReplanifie":false,"reveilEnregistre":true,\
+        "autorisation":"accordée","audioActif":true,"audioInterruptions":2,\
+        "audioReprises":1,"alarmesArmees":[],"rattrapageIncomplet":false,\
+        "faitsSonnes":7,"derniers":[]}
+        """
+        let etat = try JSONDecoder().decode(EtatCanal.self, from: Data(ancien.utf8))
+        #expect(etat.audioInterruptions == 2)
+        #expect(etat.faitsSonnes == 7)
+        #expect(etat.localisationActive == nil)
+        #expect(!etat.localisationTient)
+    }
 }
