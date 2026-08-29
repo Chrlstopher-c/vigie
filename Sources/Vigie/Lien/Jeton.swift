@@ -12,8 +12,7 @@ import VigieNoyau
 /// à chaque ouverture — sur une app consultée trente fois par jour.
 ///
 /// On extrait donc la valeur du `Set-Cookie`, on la range ici, et `ClientPi`
-/// pose lui-même l'en-tête `Cookie:`. Le serveur ne vérifie qu'une égalité de
-/// détail du modèle d'authentification retiré de l'historique.
+/// pose lui-même l'en-tête `Cookie:`.
 /// Par où une valeur est réellement passée. Le repli fichier n'est pas un
 /// équivalent du trousseau : il ne survit pas à une désinstallation et vit dans
 /// le conteneur, dont l'UUID change à chaque pose d'IPA.

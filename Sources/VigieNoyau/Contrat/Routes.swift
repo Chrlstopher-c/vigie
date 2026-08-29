@@ -108,9 +108,9 @@ public enum Route {
     public static let agentWebappHorsPerimetre = "/api/agent/chat"
 
     /// `☠` HORS PÉRIMÈTRE v1, et l'omission est délibérée : `POST /api/shutdown`
-    /// éteint la machine de travail. Sur un écran tenu
-    /// d'une main, le rapport bénéfice/risque est mauvais. À rouvrir seulement
-    /// derrière un geste armé et Face ID.
+    /// éteint la machine de travail. Sur un écran tenu d'une main, le rapport
+    /// bénéfice/risque est mauvais. À rouvrir seulement derrière un geste armé
+    /// et Face ID.
     public static let extinctionPosteHorsPerimetre = "/api/shutdown"
 
     /// Encodage de segment d'URL. Le serveur `decodeURIComponent` chaque segment

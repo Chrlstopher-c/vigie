@@ -175,9 +175,10 @@ sonné au moins une fois.
 - [ ] **E** — cookie de session sans `max_age` ni `expires` : il ne survit pas au
       relancement. `☠` Non corrigé par le commit `2e0689f` de la branche
       `local-models`, qui ne touche que le drapeau `secure`.
-- [ ] Durcir l'authentification du serveur. `☠` Le
-      détail du modèle d'authentification retiré de l'historique.
-      Voir les notes locales.
+- [ ] **Durcir l'authentification du serveur** avant toute exposition du code.
+      `☠` Le détail reste hors dépôt, dans les notes locales : décrire ici le
+      modèle d'authentification d'un service joignable depuis Internet revient à
+      en publier le mode d'emploi.
 - [ ] Réveil par machine (voir la section multi-machines ci-dessus).
 
 ## Client — ce qui manque encore
@@ -215,8 +216,8 @@ sonné au moins une fois.
   `/api/agent/usage`, `/api/agent/context-usage`). Décision de Chris du
   2026-08-18 : Vigie est le client de l'orchestrateur et du parc, pas un second
   chat. `Route.agentWebappHorsPerimetre` porte la note.
-- **`POST /api/shutdown`** : éteint la machine de travail sans confirmation
-  serveur. À rouvrir seulement derrière un geste armé et Face ID.
+- **`POST /api/shutdown`** : éteint la machine de travail. À rouvrir seulement
+  derrière un geste armé et Face ID.
 - **`GET /api/metrics`** (métriques live du PC par websocket, 3 s côté webapp) :
   Vigie lit `/machines/metriques` du harness, à la demande. Sonder en boucle
   coûterait la batterie d'une journée pour un chiffre regardé trois secondes.
