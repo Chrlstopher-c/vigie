@@ -1,5 +1,7 @@
 # Vigie — état
 
+Licence : **AGPL-3.0-or-later** (`LICENSE`).
+
 Client iOS natif de ccremote. Plan de référence : `/home/trinity/PLAN-VIGIE.md`
 (les **décisions de Chris du 2026-08-17**, en fin de document, priment sur tout
 le reste). Chaîne de compilation portée d'EchoLabs, bundle `com.echo.labs`.
