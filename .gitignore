@@ -2,3 +2,4 @@
 xtool/
 logs/
 *.log
+.env.local

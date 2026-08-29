@@ -6,6 +6,15 @@
 	     nôtre l'emporte). Aucune de ces clés n'est un entitlement : elles ne
 	     sont donc pas soumises à la signature Apple et fonctionnent en free
 	     provisioning. -->
+	<!-- Adresses du serveur, substituées au build par `build.sh` depuis
+	     `.env.local` (non suivi). Les valeurs ci-dessous sont des exemples de
+	     documentation : le dépôt ne porte aucune adresse réelle. Elles ne sont
+	     qu'une amorce — l'adresse effective se saisit dans les Réglages et vit
+	     ensuite dans `UserDefaults`. -->
+	<key>VigieAdresseTunnel</key>
+	<string>https://vigie.example.com</string>
+	<key>VigieAdresseLAN</key>
+	<string>http://vigie.local:8766</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<!-- Exécution continue tant qu'une session audio joue : seul moyen de

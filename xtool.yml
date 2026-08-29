@@ -1,4 +1,4 @@
 version: 1
 bundleID: com.echo.labs
-infoPath: Info.plist
+infoPath: .build/Info.plist
 iconPath: Icone.png

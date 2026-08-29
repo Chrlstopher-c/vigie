@@ -14,9 +14,30 @@ import VigieNoyau
 public final class Cablage {
 
     /// Adresse par défaut : le tunnel Cloudflare du Pi (`deploy-web-pi.sh`).
-    /// Le repli LAN — `http://vigie.local:8766` — se saisit dans les Réglages,
-    /// et sert quand le tunnel est coupé mais que le WiFi de la maison est là.
-    public static let adresseParDefaut = URL(string: "https://vigie.example.com")!
+    ///
+    /// `☠` Aucune adresse réelle ne vit dans le code : les deux valeurs sont
+    /// lues dans l'`Info.plist`, que `build.sh` génère depuis `.env.local` (non
+    /// suivi) — voir `Info.template.plist`. Sans fichier local, le repli est une
+    /// adresse d'exemple, et l'adresse effective se saisit dans les Réglages.
+    public static let adresseParDefaut = adresseEmbarquee(
+        "VigieAdresseTunnel", repli: "https://vigie.example.com"
+    )
+
+    /// Le repli LAN : sert quand le tunnel est coupé mais que le WiFi de la
+    /// maison est là. Proposé en raccourci dans les Réglages.
+    public static let adresseLAN = adresseEmbarquee(
+        "VigieAdresseLAN", repli: "http://vigie.local:8766"
+    )
+
+    private static func adresseEmbarquee(_ cle: String, repli: String) -> URL {
+        let brut = Bundle.main.object(forInfoDictionaryKey: cle) as? String
+        guard let brut, let url = URL(string: brut) else {
+            // `URL(string:)` sur une constante littérale valide ne peut pas
+            // rendre nil ; le `!` est ici sur le repli, pas sur une entrée.
+            return URL(string: repli)!
+        }
+        return url
+    }
 
     private static let cleAdresse = "vigie.adresse"
 

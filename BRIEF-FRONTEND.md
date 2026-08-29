@@ -248,6 +248,9 @@ calé. Aucun `#Preview` ne sert à quoi que ce soit ici.
 
 - **Compiler** : `./build.sh` depuis `/home/trinity/vigie`. Produit
   `xtool/Vigie.ipa`. C'est ton unique vérification — utilise-la souvent.
+- **Adresses du serveur** : jamais en dur. Elles se lisent dans l'`Info.plist`
+  via `Cablage.adresseParDefaut` / `Cablage.adresseLAN`, alimentés par
+  `.env.local` (non suivi) au moment du build.
 - **Tests du noyau** : `. ~/.local/share/swiftly/env.sh && swift test`. Doivent
   rester verts.
 - **Swift 6, concurrence stricte.** `@MainActor`, `Sendable`, `@Observable`.

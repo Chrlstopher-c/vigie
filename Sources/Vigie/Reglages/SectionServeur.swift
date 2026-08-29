@@ -54,7 +54,7 @@ struct SectionServeur: View {
         HStack(spacing: Trame.serre) {
             Button("Tunnel par défaut") { adresse = Cablage.adresseParDefaut.absoluteString }
                 .buttonStyle(.allurePuce)
-            Button("Repli LAN") { adresse = "http://vigie.local:8766" }
+            Button("Repli LAN") { adresse = Cablage.adresseLAN.absoluteString }
                 .buttonStyle(.allurePuce)
         }
     }

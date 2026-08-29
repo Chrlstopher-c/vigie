@@ -4,6 +4,12 @@ Client iOS natif de ccremote. Plan de référence : `/home/trinity/PLAN-VIGIE.md
 (les **décisions de Chris du 2026-08-17**, en fin de document, priment sur tout
 le reste). Chaîne de compilation portée d'EchoLabs, bundle `com.echo.labs`.
 
+`☠` **Le dépôt ne porte aucune adresse réelle.** Le tunnel Cloudflare et le repli
+LAN vivent dans `.env.local` (non suivi, calqué sur `.env.example`) ; `build.sh`
+les injecte dans `.build/Info.plist`, généré depuis `Info.template.plist`. Sans
+`.env.local`, la compilation reste valide mais embarque les adresses d'exemple —
+l'adresse effective se saisit alors dans les Réglages.
+
 ## Au 2026-08-17 — refonte « Quart de nuit »
 
 **Frontend intégralement refondu (DA sombre, voir `Sources/Vigie/Charte/CHARTE.md`).
