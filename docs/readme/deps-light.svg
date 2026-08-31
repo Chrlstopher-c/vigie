@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="232" viewBox="0 0 1040 232" fill="none" role="img">
+  <rect width="1040" height="232" rx="16" fill="#ffffff" stroke="#d0d7de"/>
+  <text x="30" y="36" font-family="ui-monospace,'SF Mono',Consolas,monospace" font-size="12" letter-spacing="2.5" fill="#59636e">WHAT IT IS BUILT WITH</text>
+  <rect x="30" y="56" width="313.3333333333333" height="152" rx="12" fill="#ffffff" stroke="#d0d7de"/>
+  <text x="48" y="106" font-family="Georgia,'Times New Roman',serif" font-size="30" font-weight="600" fill="#1f2328">Swift 6</text>
+  <text x="48" y="132" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="13" fill="#3b4149">SwiftUI, one library product because that is</text><text x="48" y="149" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="13" fill="#3b4149">what xtool wants</text>
+  <text x="48" y="172" font-family="ui-monospace,'SF Mono',Consolas,monospace" font-size="10.5" fill="#59636e">Package.swift, iOS 18 and macOS 14</text>
+  <rect x="363.3333333333333" y="56" width="313.3333333333333" height="152" rx="12" fill="#ffffff" stroke="#d0d7de"/>
+  <text x="381.3333333333333" y="106" font-family="Georgia,'Times New Roman',serif" font-size="38" font-weight="600" fill="#1f2328">xtool<tspan font-size="16" fill="#59636e"> 1.17</tspan></text>
+  <text x="381.3333333333333" y="132" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="13" fill="#3b4149">builds and packages the IPA on Linux with the</text><text x="381.3333333333333" y="149" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="13" fill="#3b4149">Darwin SDK</text>
+  <text x="381.3333333333333" y="172" font-family="ui-monospace,'SF Mono',Consolas,monospace" font-size="10.5" fill="#59636e">no Mac, no Xcode, no simulator</text>
+  <rect x="696.6666666666666" y="56" width="313.3333333333333" height="152" rx="12" fill="#ffffff" stroke="#d0d7de"/>
+  <text x="714.6666666666666" y="106" font-family="Georgia,'Times New Roman',serif" font-size="38" font-weight="600" fill="#1f2328">16<tspan font-size="16" fill="#59636e"> frameworks</tspan></text>
+  <text x="714.6666666666666" y="132" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="13" fill="#3b4149">Apple frameworks only: Speech,</text><text x="714.6666666666666" y="149" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="13" fill="#3b4149">LocalAuthentication, WebKit, BackgroundTasks</text>
+  <text x="714.6666666666666" y="172" font-family="ui-monospace,'SF Mono',Consolas,monospace" font-size="10.5" fill="#59636e">grep import across Sources</text>
+</svg>

@@ -113,22 +113,34 @@ deux restaurés, suite verte à nouveau.
 - Cohabitation avec le reste du fil en défilement (un artefact volumineux
   dans une longue conversation).
 
-## Ce qui n'a JAMAIS été exercé
+## Vérifié sur l'appareil — 2026-08-31
 
-`☠` **Aucune requête HTTP réelle n'a été faite contre le Pi.** Toutes les formes
-de réponse sont dérivées de la lecture des sources du dépôt `ccremote`. Le
-premier vrai jour de recette doit être une capture `curl` de chaque route, pas
-une session de codage.
+`✓` **L'IPA courant tourne sur l'iPhone et parle au Pi en direct.** Captures du
+2026-08-31 (`screen/`, reprises dans `README.md`) : `Quart`, `Fil`, `Parc` et
+`Machines` affichent le parc réel à travers le tunnel — 2/3 machines en ligne,
+mémoire 47 %, disque 97 %, GPU 2537/12288 Mo, 200 équipes sur 10 projets, quota
+5 h à 86 %, fils datés avec leur machine. Le contrat d'API tient donc contre le
+vrai serveur, pas seulement contre les tests du noyau.
 
-`☠` **L'IPA n'a pas été posé sur l'appareil depuis que ces domaines existent.**
-Rien de ce qui touche `UserNotifications`, `BGTaskScheduler`, `LocalAuthentication`
-ni la veille audio n'a été vu tourner dans cette application-ci. (Les mesures
-d'EchoLabs, elles, tiennent — voir `PLAN-VIGIE.md`.)
+`✓` **Dictée** : tourne sur l'appareil depuis le 2026-08-18.
 
-**Exception, 2026-08-18 : la dictée a tourné sur l'appareil et fonctionne.**
-Reste à vérifier au prochain passage la cohabitation micro / canal d'alerte —
-dicter pendant que `MaintienVie` tient sa session est raisonné, pas encore
-mesuré.
+⚠ **Correction du 2026-08-31.** Cette section affirmait jusqu'ici qu'aucune
+requête réelle n'avait été faite contre le Pi et que l'IPA n'avait pas été posé
+depuis la refonte. Les deux étaient périmées — écrites mi-août, jamais relues
+après les poses suivantes. Un README public les avait recopiées telles quelles.
+Leçon : une section « jamais exercé » se re-date à chaque pose d'IPA, sinon elle
+ment dans le sens qui dévalorise le travail fait.
+
+## Reste à vérifier sur l'appareil
+
+- `UserNotifications` et `BGTaskScheduler` : réveil réel, rattrapage après une
+  longue mise en veille.
+- `LocalAuthentication` : la garde Face ID sur une décision, et son repli quand
+  la biométrie est refusée.
+- Veille audio / `MaintienVie` : tenue de session sur la durée, et cohabitation
+  micro (dictée) pendant qu'elle tient.
+- Le coût réel du canal d'alerte : 25 s fixes × 3 requêtes, mesuré batterie en
+  main plutôt que raisonné.
 
 ## Côté serveur : rien n'est fait
 

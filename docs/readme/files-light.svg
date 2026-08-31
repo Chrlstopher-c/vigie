@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="864" viewBox="0 0 1040 864" fill="none" role="img">
+  <rect width="1040" height="864" rx="16" fill="#ffffff" stroke="#d0d7de"/>
+  <rect x="30" y="24" width="980" height="106" rx="12" fill="#ffffff" stroke="#d0d7de"/>
+  <text x="46" y="46" font-family="ui-monospace,'SF Mono',Consolas,monospace" font-size="11" letter-spacing="2.5" fill="#59636e">BUILD OUTPUTS · NEVER COMMITTED</text>
+  <path d="M49 67 h9 l5 5 v11 h-14 z" fill="none" stroke="#d8a35f" stroke-width="1.4"/>
+    <text x="76" y="79" font-family="ui-monospace,'SF Mono',Consolas,monospace" font-size="12.5" fill="#1f2328">xtool/Vigie.ipa</text>
+    <text x="500" y="79" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12.5" fill="#3b4149">the unsigned app, about 17 MB, produced by build.sh</text>
+  <path d="M49 97 h9 l5 5 v11 h-14 z" fill="none" stroke="#d8a35f" stroke-width="1.4"/>
+    <text x="76" y="109" font-family="ui-monospace,'SF Mono',Consolas,monospace" font-size="12.5" fill="#1f2328">.build/Info.plist</text>
+    <text x="500" y="109" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12.5" fill="#3b4149">the effective plist, generated from the template at each build</text>
+  <rect x="30" y="148" width="980" height="136" rx="12" fill="#ffffff" stroke="#d0d7de"/>
+  <text x="46" y="170" font-family="ui-monospace,'SF Mono',Consolas,monospace" font-size="11" letter-spacing="2.5" fill="#59636e">CONFIGURATION</text>
+  <path d="M49 191 h9 l5 5 v11 h-14 z" fill="none" stroke="#d8a35f" stroke-width="1.4"/>
+    <text x="76" y="203" font-family="ui-monospace,'SF Mono',Consolas,monospace" font-size="12.5" fill="#1f2328">.env.local</text>
+    <text x="500" y="203" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12.5" fill="#3b4149">your real addresses, ignored by git (.env.example is the template)</text>
+  <path d="M49 221 h9 l5 5 v11 h-14 z" fill="none" stroke="#d8a35f" stroke-width="1.4"/>
+    <text x="76" y="233" font-family="ui-monospace,'SF Mono',Consolas,monospace" font-size="12.5" fill="#1f2328">Info.template.plist</text>
+    <text x="500" y="233" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12.5" fill="#3b4149">versioned plist, example addresses only</text>
+  <path d="M49 251 h9 l5 5 v11 h-14 z" fill="none" stroke="#d8a35f" stroke-width="1.4"/>
+    <text x="76" y="263" font-family="ui-monospace,'SF Mono',Consolas,monospace" font-size="12.5" fill="#1f2328">xtool.yml</text>
+    <text x="500" y="263" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12.5" fill="#3b4149">bundle id com.echo.labs, plist path, app icon</text>
+  <rect x="30" y="302" width="980" height="166" rx="12" fill="#ffffff" stroke="#d0d7de"/>
+  <text x="46" y="324" font-family="ui-monospace,'SF Mono',Consolas,monospace" font-size="11" letter-spacing="2.5" fill="#59636e">PLIST KEYS THAT MUST STAY</text>
+  <path d="M56 344 l8 3 v7 c0 5 -4 9 -8 11 c-4 -2 -8 -6 -8 -11 v-7 z" fill="none" stroke="#d8a35f" stroke-width="1.4"/>
+    <text x="76" y="357" font-family="ui-monospace,'SF Mono',Consolas,monospace" font-size="12.5" fill="#1f2328">NSFaceIDUsageDescription</text>
+    <text x="500" y="357" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12.5" fill="#3b4149">missing, the first Face ID call kills the process instead of failing</text>
+  <path d="M56 374 l8 3 v7 c0 5 -4 9 -8 11 c-4 -2 -8 -6 -8 -11 v-7 z" fill="none" stroke="#d8a35f" stroke-width="1.4"/>
+    <text x="76" y="387" font-family="ui-monospace,'SF Mono',Consolas,monospace" font-size="12.5" fill="#1f2328">NSSpeechRecognitionUsageDescription</text>
+    <text x="500" y="387" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12.5" fill="#3b4149">missing, instantiating the recogniser kills the process, even offline</text>
+  <path d="M56 404 l8 3 v7 c0 5 -4 9 -8 11 c-4 -2 -8 -6 -8 -11 v-7 z" fill="none" stroke="#d8a35f" stroke-width="1.4"/>
+    <text x="76" y="417" font-family="ui-monospace,'SF Mono',Consolas,monospace" font-size="12.5" fill="#1f2328">UIBackgroundModes</text>
+    <text x="500" y="417" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12.5" fill="#3b4149">audio, location, fetch and processing: how it stays alive without a paid account</text>
+  <path d="M56 434 l8 3 v7 c0 5 -4 9 -8 11 c-4 -2 -8 -6 -8 -11 v-7 z" fill="none" stroke="#d8a35f" stroke-width="1.4"/>
+    <text x="76" y="447" font-family="ui-monospace,'SF Mono',Consolas,monospace" font-size="12.5" fill="#1f2328">BGTaskSchedulerPermittedIdentifiers</text>
+    <text x="500" y="447" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12.5" fill="#3b4149">the two background task ids, required for the scheduled refresh</text>
+  <rect x="30" y="486" width="980" height="106" rx="12" fill="#ffffff" stroke="#d0d7de"/>
+  <text x="46" y="508" font-family="ui-monospace,'SF Mono',Consolas,monospace" font-size="11" letter-spacing="2.5" fill="#59636e">ON THE PHONE</text>
+  <circle cx="56" cy="536" r="6" fill="none" stroke="#d8a35f" stroke-width="1.4"/><circle cx="56" cy="536" r="2" fill="#d8a35f"/>
+    <text x="76" y="541" font-family="ui-monospace,'SF Mono',Consolas,monospace" font-size="12.5" fill="#1f2328">Keychain · com.echo.labs.vigie</text>
+    <text x="500" y="541" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12.5" fill="#3b4149">the API token, readable after first unlock, on this device only</text>
+  <path d="M46 559 h7 l3 3 h10 v12 h-20 z" fill="none" stroke="#d8a35f" stroke-width="1.4"/>
+    <text x="76" y="571" font-family="ui-monospace,'SF Mono',Consolas,monospace" font-size="12.5" fill="#1f2328">app container</text>
+    <text x="500" y="571" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12.5" fill="#3b4149">gets a new UUID at every install, so no absolute path is ever stored</text>
+  <rect x="30" y="610" width="980" height="106" rx="12" fill="#ffffff" stroke="#d0d7de"/>
+  <text x="46" y="632" font-family="ui-monospace,'SF Mono',Consolas,monospace" font-size="11" letter-spacing="2.5" fill="#59636e">LOGS</text>
+  <path d="M48 653 h14 v16 h-14 z M51 658 h8 M51 662 h8 M51 666 h5" fill="none" stroke="#d8a35f" stroke-width="1.4"/>
+    <text x="76" y="665" font-family="ui-monospace,'SF Mono',Consolas,monospace" font-size="12.5" fill="#1f2328">./logs.sh</text>
+    <text x="500" y="665" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12.5" fill="#3b4149">streams the phone's system log filtered on Vigie (idevicesyslog)</text>
+  <path d="M48 683 h14 v16 h-14 z M51 688 h8 M51 692 h8 M51 696 h5" fill="none" stroke="#d8a35f" stroke-width="1.4"/>
+    <text x="76" y="695" font-family="ui-monospace,'SF Mono',Consolas,monospace" font-size="12.5" fill="#1f2328">./logs.sh --all</text>
+    <text x="500" y="695" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12.5" fill="#3b4149">the whole device log, or pass any pattern to filter it</text>
+  <rect x="30" y="734" width="980" height="106" rx="12" fill="#ffffff" stroke="#d0d7de"/>
+  <text x="46" y="756" font-family="ui-monospace,'SF Mono',Consolas,monospace" font-size="11" letter-spacing="2.5" fill="#59636e">SOURCES</text>
+  <path d="M46 777 h7 l3 3 h10 v12 h-20 z" fill="none" stroke="#d8a35f" stroke-width="1.4"/>
+    <text x="76" y="789" font-family="ui-monospace,'SF Mono',Consolas,monospace" font-size="12.5" fill="#1f2328">Sources/Vigie/</text>
+    <text x="500" y="789" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12.5" fill="#3b4149">one folder per screen, plus Charte for the design language and Lien for the HTTP client</text>
+  <path d="M46 807 h7 l3 3 h10 v12 h-20 z" fill="none" stroke="#d8a35f" stroke-width="1.4"/>
+    <text x="76" y="819" font-family="ui-monospace,'SF Mono',Consolas,monospace" font-size="12.5" fill="#1f2328">Sources/VigieNoyau/</text>
+    <text x="500" y="819" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12.5" fill="#3b4149">pure Swift core: contract, mirror, threads, watch logic. No UIKit, so it tests on Linux</text>
+</svg>

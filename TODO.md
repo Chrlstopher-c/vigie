@@ -7,12 +7,17 @@ du décor : quand un arbitrage se pose, c'est ce classement qui tranche.
 
 ## 🔴 D'abord : confronter au réel
 
-Rien de ce qui suit n'a de sens avant. Tout le code d'interface a été écrit sans
-simulateur, sans preview et sans débogueur.
+Tout le code d'interface a été écrit sans simulateur, sans preview et sans
+débogueur. La confrontation a commencé le 2026-08-31 (voir `STATE.md`) : l'IPA
+courant tourne sur l'iPhone, et `Quart`, `Fil`, `Parc` et `Machines` affichent le
+parc réel à travers le tunnel. Ce qui suit est ce qu'il reste à confronter.
 
-1. **Poser l'IPA sur l'iPhone** et ouvrir chaque écran.
-2. **Capturer chaque route au `curl`** depuis le Pi et comparer aux `Codable` du
-   contrat. Les formes ont été dérivées des sources, jamais observées.
+1. ✅ **Poser l'IPA et ouvrir les écrans** — fait le 2026-08-31 pour les quatre
+   écrans ci-dessus. Restent à ouvrir sur l'appareil : `Decisions`, `Terminal`,
+   `Artefact`, `Alerte`, `Reglages`, `Diagnostic`.
+2. ✅ **Formes de réponse** — décodées sans erreur par les `Codable` du contrat
+   sur les routes servant ces quatre écrans. Restent à confronter les routes des
+   écrans non ouverts, au `curl` depuis le Pi ou par l'app elle-même.
 3. Vérifier les trois sondes de `Diagnostic/` sur l'appareil : autorisation
    accordée, aller-retour de trousseau, modes de fond déclarés.
 4. Vérifier que `Reprise` s'enregistre (`reveilEnregistre`) — un identifiant
